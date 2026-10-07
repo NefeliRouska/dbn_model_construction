@@ -1,0 +1,9 @@
+# Raw Prometheus dumps and derived wide CSVs (multi-GB, kept out of git)
+data/
+
+.DS_Store
+__pycache__/
+*.pyc
+venv/
+.venv/
+.idea/

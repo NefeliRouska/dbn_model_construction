@@ -1,0 +1,10 @@
+# Collected from the imports of the DBN scripts; versions not pinned yet.
+numpy
+pandas
+scipy
+scikit-learn
+pgmpy
+networkx
+matplotlib
+torch            # lstm_baseline.py only
+mrmr_selection   # legacy mRMR feature selection (imported as `mrmr`)
