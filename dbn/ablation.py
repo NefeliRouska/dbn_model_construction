@@ -58,6 +58,7 @@ DEFAULTS = dict(
     horizon=1,              # rows ahead
     cross_run=True,         # also learn / test the configuration changes
     pool="core",            # core: service metrics | all: + process / GC metrics
+                            # | local: the target's own service + what flows into it
     cv="expanding",         # expanding | blocked
     folds=5,
     # --- state ---
@@ -82,6 +83,7 @@ DEFAULTS = dict(
     target_mode="level",    # level: P(bin of y') | delta: P(bin of y' - bin of y)
     prior="backoff",        # bdeu (what pgmpy fits) | backoff (to the AR table)
     ess=10.0,
+    numeric=False,          # also score continuous read-outs of the same model (see numeric_models)
     on_change="same",       # what predicts the first step after a reconfiguration:
                             # same: the model above | static: a second table over the
                             # new configuration | chain: inference in the service chain
@@ -158,10 +160,33 @@ class Samples:
         return (self.target if base == "y" else base), kind
 
 
+def service_of(col):
+    """Index of the service a column belongs to (throughput_3 -> 3), None for rps etc."""
+    tail = col.rsplit("_", 1)[-1]
+    return int(tail) if tail.isdigit() else None
+
+
+def local_pool(S):
+    """
+    Domain constraint: a service's output can only depend on that service's own
+    state and settings and on what the previous stage sends it (the load, for
+    the first service).
+    """
+    i = service_of(S.target)
+    upstream = D.LOAD_COL if i == 1 else f"throughput_{i - 1}"
+    return [v for v in S.vars if is_core(v) and (service_of(v) == i or v == upstream)]
+
+
+def variable_pool(S, cfg):
+    if cfg["pool"] == "local":
+        return local_pool(S)
+    return [v for v in S.vars if cfg["pool"] == "all" or is_core(v)]
+
+
 def candidate_columns(S, cfg):
     exog = set(D.exog_cols(S.vars, cfg["exog"]))
     controls = set(D.exog_cols(S.vars, "controls"))
-    pool = [v for v in S.vars if cfg["pool"] == "all" or is_core(v)]
+    pool = variable_pool(S, cfg)
     cands = []
     for v in pool:
         name = "y" if v == S.target else v
@@ -208,9 +233,19 @@ class Binner:
         y_train = np.r_[S.y1[train], S.y0[train]]
         self.y_edges = _edges(y_train, nb, cfg["disc"])
         self.n_y = len(self.y_edges) + 1
-        self.shared = {S.target}
+        # The throughputs and the load are the same quantity measured at different
+        # points of the chain: one set of bin edges for all of them. It is the
+        # target's own edges when the target is one of them.
+        flow = {v for v in S.vars if v.startswith("throughput_") or v == D.LOAD_COL}
+        self.shared_edges = {S.target: self.y_edges}
         if cfg["shared_bins"]:
-            self.shared |= {v for v in S.vars if v.startswith("throughput_") or v == D.LOAD_COL}
+            if S.target in flow:
+                edges = self.y_edges
+            else:
+                pooled = np.concatenate([S.cols[f"{v}@t"][train] for v in sorted(flow)])
+                edges = _edges(pooled, nbx, "uniform")
+            self.shared_edges.update({v: edges for v in flow if v != S.target})
+        self.shared = set(self.shared_edges)
         self.nbx = nbx
 
     def _symmetric_edges(self, x, n_side):
@@ -235,7 +270,7 @@ class Binner:
                                                     max(2, self.nbx // 4))
             return
         if var in self.shared:
-            self.edges[key] = self.y_edges
+            self.edges[key] = self.shared_edges[var]
             return
         x = S.cols[f"{name}@t"][self.train]
         uniq = np.unique(x)
@@ -441,7 +476,7 @@ def dynotears_parents(S, cfg, rows, forced, max_parents, lam=0.02):
     from dynotears import dynotears
     exog = D.exog_cols(S.vars, cfg["exog"])
     controls = set(D.exog_cols(S.vars, "controls"))
-    pool = [v for v in S.vars if cfg["pool"] == "all" or is_core(v)]
+    pool = variable_pool(S, cfg)
     p = max(cfg["ar_order"], cfg["other_lags"])
     idx = np.nonzero(rows)[0]
 
@@ -627,6 +662,85 @@ def fit_table(cfg, code_tr, parents, ar_table):
                cfg["prior"], cfg["ess"], bo)
 
 
+def numeric_models(S, cfg, binner, tr, te, parents):
+    """
+    Continuous forecasts of y(t+h) from the SAME parents the structure search
+    selected. The table P(bin' | parents) can only move the forecast by whole
+    bins; these keep the discrete parents and change what the target node is.
+
+      cg_mean    conditional-Gaussian node: for every parent configuration, the
+                 mean change y' - y seen in training (shrunk towards the mean
+                 for that bin of y when the configuration is rare).
+      cg_median  the same with the median (the best constant for absolute error).
+      clg        conditional linear-Gaussian node: the parents that are flows
+                 (throughputs, load, y itself) enter as continuous regressors,
+                 the other parents (queues, latency, cores, quality) select the
+                 regime; one linear model per regime, a global one as fallback.
+      linear     linear-Gaussian node: one linear model on the continuous values
+                 of all selected parents (what a DYNOTEARS / Gaussian BN node is).
+    """
+    c_tr, c_te = Coder(S, {**cfg, "target_mode": "level"}, binner, tr), \
+        Coder(S, {**cfg, "target_mode": "level"}, binner, te)
+    d_tr, y0_te = (S.y1 - S.y0)[tr], S.y0[te]
+    out = {}
+
+    codes_tr = [c_tr(p) for p in parents]
+    cards = [k for _, k in codes_tr]
+    key_tr = _keys([c for c, _ in codes_tr], cards)
+    key_te = _keys([c_te(p)[0] for p in parents], cards)
+    y0bin_tr, y0bin_te = c_tr.y0, c_te.y0
+    g = pd.DataFrame({"key": key_tr, "bin": y0bin_tr, "d": d_tr})
+    by_bin = g.groupby("bin")["d"].agg(["mean", "median"]).reindex(range(binner.n_y)).fillna(0.0)
+    by_key = g.groupby("key")["d"].agg(["sum", "count", "median"])
+    loc = by_key.reindex(key_te)
+    n = loc["count"].fillna(0).to_numpy()
+    prior_mean = by_bin["mean"].to_numpy()[y0bin_te]
+    out["cg_mean"] = y0_te + (loc["sum"].fillna(0).to_numpy() + cfg["ess"] * prior_mean) / (n + cfg["ess"])
+    out["cg_median"] = y0_te + np.where(n >= 5, loc["median"].fillna(0).to_numpy(),
+                                        by_bin["median"].to_numpy()[y0bin_te])
+
+    def design(cols, rows):
+        # flows relative to the current value of the target, plus that value
+        X = [np.ones(int(rows.sum())), S.y0[rows]]
+        X += [S.cols[c][rows] - S.y0[rows] for c in cols if c != "y@t"]
+        return np.column_stack(X)
+
+    def ridge(X, y, lam=1e-3):
+        A_ = X.T @ X + lam * len(y) * np.eye(X.shape[1])
+        return np.linalg.solve(A_, X.T @ y)
+
+    cont = [p for p in parents if not p.startswith(("d.", "g."))]
+    X_tr, X_te = design(cont, tr), design(cont, te)
+    mu, sd = X_tr.mean(0), X_tr.std(0)
+    sd[sd == 0] = 1.0
+    mu[0], sd[0] = 0.0, 1.0
+    out["linear"] = y0_te + ((X_te - mu) / sd) @ ridge((X_tr - mu) / sd, d_tr)
+
+    flows = [p for p in parents if p == "y@t" or
+             (S.var_of(p)[1] == "" and (S.var_of(p)[0] in S.family or S.var_of(p)[0] == S.target))]
+    regime = [p for p in parents if p not in flows]
+    F_tr, F_te = design(flows, tr), design(flows, te)
+    fm, fs = F_tr.mean(0), F_tr.std(0)
+    fs[fs == 0] = 1.0
+    fm[0], fs[0] = 0.0, 1.0
+    F_tr, F_te = (F_tr - fm) / fs, (F_te - fm) / fs
+    pred = F_te @ ridge(F_tr, d_tr)
+    if regime:
+        r_tr = _keys([c_tr(p)[0] for p in regime], [c_tr(p)[1] for p in regime])
+        r_te = _keys([c_te(p)[0] for p in regime], [c_tr(p)[1] for p in regime])
+        order = np.argsort(r_tr, kind="stable")
+        uniq, start, count = np.unique(r_tr[order], return_index=True, return_counts=True)
+        for u, s0, k in zip(uniq, start, count):
+            if k < 200:
+                continue
+            rows = order[s0:s0 + k]
+            hit = r_te == u
+            if hit.any():
+                pred[hit] = F_te[hit] @ ridge(F_tr[rows], d_tr[rows])
+    out["clg"] = y0_te + pred
+    return out
+
+
 def chain_predict(S, cfg, binner, tr, te):
     """
     The service chain written as a same-slice Bayesian network and queried by
@@ -645,9 +759,9 @@ def chain_predict(S, cfg, binner, tr, te):
     level = {**cfg, "target_mode": "level"}
     c_tr, c_te = Coder(S, level, binner, tr), Coder(S, level, binner, te)
     K, n = binner.n_y, c_te.n
-    chain = [(f"{D.LOAD_COL}@t+h", "throughput_1@t+h", "1"),
-             ("throughput_1@t+h", "throughput_2@t+h", "2"),
-             ("throughput_2@t+h", None, "3")]
+    last = service_of(S.target)
+    chain = [(f"{D.LOAD_COL}@t+h" if i == 1 else f"throughput_{i - 1}@t+h",
+              None if i == last else f"throughput_{i}@t+h", str(i)) for i in range(1, last + 1)]
     P_up = None
     for up, node, i in chain:
         ctrl = [f"cores_{i}@t+h", f"data_quality_{i}@t+h"]
@@ -713,7 +827,7 @@ def run_fold(S, cfg, tr, te, extra_models=()):
         Ps = sc.predict([lv_te(p)[0] for p in sp], n_te)
         P = np.where(masks["xrun"][:, None], Ps, P)
         info["static_parents"] = sp
-    elif cfg["on_change"] == "chain" and masks["xrun"].any():
+    elif cfg["on_change"] == "chain" and masks["xrun"].any() and S.target.startswith("throughput_"):
         P = np.where(masks["xrun"][:, None], chain_predict(S, cfg, binner, tr, te), P)
     elif cfg["on_change"] not in ("same", "static", "chain"):
         raise ValueError("on_change must be same | static | chain")
@@ -730,6 +844,12 @@ def run_fold(S, cfg, tr, te, extra_models=()):
         out[name] = (summ, per_run_table(L, run_te, masks))
 
     add("model", P)
+    if cfg["numeric"]:
+        # the reconfiguration steps keep the bin-based forecast (chain inference
+        # when on_change='chain'); inside a run the read-outs below replace it
+        fallback = np.where(masks["xrun"], P @ bin_value, y0c + P @ bin_value - bin_value[y0te])
+        for name, point in numeric_models(S, cfg, binner, tr, te, parents).items():
+            add(name, P, np.where(masks["xrun"], fallback, point))
     # AR(1) on the bins: the reference every configuration is compared with
     lv = Coder(S, {**cfg, "target_mode": "level"}, binner, tr)
     ar, _ = ar_model(lv("y@t"), lv.y, n_y, cfg["ess"])
@@ -874,7 +994,49 @@ def study_best():
     return c
 
 
-STUDIES = {"best": study_best, "config_change": study_config_change, "ofat": study_ofat, "bins_granularity": study_bins_granularity, "horizon": study_horizon,
+def study_targets():
+    """The same model for every non-exogenous variable of the system (one table per variable)."""
+    c = []
+    for v in ("throughput_1", "throughput_2", "throughput_3", "avg_p_latency_1", "avg_p_latency_2",
+              "avg_p_latency_3", "buffer_size_2", "buffer_size_3"):
+        disc = "quantile" if v.startswith("buffer") else "uniform"
+        for nb in (10, 20):
+            c.append(make_cfg(target=v, n_bins=nb, disc=disc))
+            c.append(make_cfg(target=v, n_bins=nb, disc=disc, ar_order=2, other_lags=2, on_change="chain"))
+            c.append(make_cfg(target=v, n_bins=nb, disc=disc, engine="hc-bic", prior="bdeu"))
+    return c
+
+
+def study_constraints():
+    """Domain constraints on the structure: restricted candidates and forced parents."""
+    up = "throughput_2@t"
+    ctrl = ("cores_3@t+h", "data_quality_3@t+h")
+    c = [make_cfg(), make_cfg(pool="local"), make_cfg(pool="local", other_lags=2, ar_order=2),
+         make_cfg(other_lags=2, ar_order=2),
+         make_cfg(forced=("y@t", up)), make_cfg(forced=("y@t", up, "buffer_size_3@t")),
+         make_cfg(forced=("y@t", up) + ctrl, max_parents=5),
+         make_cfg(forced=("y@t", up) + ctrl, max_parents=6),
+         make_cfg(forced=("y@t",) + ctrl), make_cfg(forced=("y@t",) + ctrl, max_parents=5),
+         make_cfg(exog="none"), make_cfg(exog="none", pool="local")]
+    c += [make_cfg(engine=e, pool="local") for e in ("hc-bic", "hc-aic", "hc-bdeu", "dynotears")]
+    return c
+
+
+def study_numeric():
+    """Continuous read-outs of the DBN (conditional Gaussian / linear-Gaussian target node)."""
+    c = []
+    for nb in (10, 20, 50):
+        c.append(make_cfg(n_bins=nb, numeric=True, on_change="chain"))
+        c.append(make_cfg(n_bins=nb, numeric=True, on_change="chain", ar_order=2, other_lags=2))
+        c.append(make_cfg(n_bins=nb, numeric=True, on_change="chain", ar_order=3, other_lags=3,
+                          max_parents=6))
+    c.append(make_cfg(granularity=30, n_bins=10, numeric=True, on_change="chain"))
+    c.append(make_cfg(granularity=30, n_bins=10, numeric=True, on_change="chain", ar_order=2, other_lags=2))
+    return c
+
+
+STUDIES = {"targets": study_targets, "constraints": study_constraints, "numeric": study_numeric,
+           "best": study_best, "config_change": study_config_change, "ofat": study_ofat, "bins_granularity": study_bins_granularity, "horizon": study_horizon,
            "interactions": study_interactions, "cv": study_cv, "refs": study_refs}
 
 

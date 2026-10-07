@@ -27,7 +27,7 @@ holds the modelling code, its results, and its git history.
 | `analysis/tabpfn_baseline.py`, `analysis/tabpfn_report.py` | DBN versus TabPFN (and gradient boosting) on identical inputs, folds and test samples; pooled summary with paired intervals. |
 | `analysis/` (rest) | Markov-order analysis, Markov test, control-variable check, statistical significance of a sweep, LSTM baseline, sweep visualisation. |
 | `results/` | Outputs: `sweeps/` (result tables), `models/` (saved top models), `logs/`, `figures/`, `memory_ablation/`, `ablation/`, `tabpfn/`. |
-| `docs/` | Written reports. |
+| `docs/` | `HANDOVER.md`: what changed and every test run (kept up to date). Dated reports with the full result tables. |
 | `archive/` | Superseded script versions, early static-BN work, old runs. See `archive/README.md`. |
 | `data/` | Not tracked (≈13 GB). Raw dumps and the wide tables derived from them. |
 

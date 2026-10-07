@@ -116,6 +116,7 @@ def build_blacklist(df):
     Rules:
       - Layer 0 has no incoming edges.
       - Later layers cannot cause earlier layers.
+      - throughput_i is not a parent of throughput_j for j < i.
     """
     all_vars = list(df.columns)
 
@@ -170,6 +171,13 @@ def build_blacklist(df):
                 and layer_index[parent] > layer_index[child]
             ):
                 black.append((parent, child))
+
+    # Data flows down the chain: within a slice, a later service's throughput
+    # is not a parent of an earlier one's.
+    throughputs = sorted(v for v in all_vars if v.lower().startswith("throughput_"))
+    for i, earlier in enumerate(throughputs):
+        for later in throughputs[i + 1:]:
+            black.append((later, earlier))
 
     return black
 
@@ -246,6 +254,7 @@ def learn_inter_edges_only(
     use_cache=HC_USE_CACHE,
     pairs=None,
     exog_cols=(),
+    extra_blacklist=(),
 ):
     """
     Learn inter-slice edges X_t -> Y_t1, where "t1" means t+horizon
@@ -261,7 +270,7 @@ def learn_inter_edges_only(
         pairs = consecutive_pairs(len(df), horizon)
     df_2s = two_slice_frame(df, pairs)
 
-    blacklist = build_inter_only_blacklist(nodes, exog_cols)
+    blacklist = build_inter_only_blacklist(nodes, exog_cols) + list(extra_blacklist)
 
     est = HillClimbSearch(df_2s, use_cache=use_cache)
     best = est.estimate(
@@ -447,6 +456,7 @@ def build_dbn_model_2s(
     exog_cols=(),
     state_cards=None,
     cpt_prior="bdeu",
+    extra_inter_blacklist=(),
 ):
     """
     lag_cols: list of column names already present in df_ready holding
@@ -481,6 +491,9 @@ def build_dbn_model_2s(
     parents of the target in "observed" mode.
 
     state_cards: {column: number of states}, see fit_consistent_2slice_bn.
+
+    extra_inter_blacklist: further forbidden edges for the two-slice search,
+    as (parent node, child node) with the _t / _t1 suffixes.
 
     cpt_prior: "bdeu" (uniform prior, what pgmpy fits by default) or
     "backoff" (target_t1's table falls back to P(target_t1 | target_t), see
@@ -519,6 +532,7 @@ def build_dbn_model_2s(
         use_cache=use_cache,
         pairs=pairs,
         exog_cols=exog_cols,
+        extra_blacklist=extra_inter_blacklist,
     )
 
     inter = ensure_self_loops(df_ready.columns, inter, target=target)

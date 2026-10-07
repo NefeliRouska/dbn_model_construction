@@ -668,6 +668,7 @@ def _build_blacklist_single_slice(df):
 
 
 def _build_blacklist_two_slice(train_ready):
+    """Data flows down the chain: a later service's throughput is not a parent of an earlier one's."""
     nodes = list(train_ready.columns)
     black = []
 
@@ -1443,7 +1444,8 @@ def run_one(raw_df, fs_method, disc_method, score_name, k, n_bins,
                                       horizon=HORIZON,
                                       pairs=pairs_train, exog_cols=exog,
                                       state_cards=state_cards,
-                                      cpt_prior=CPT_PRIOR)
+                                      cpt_prior=CPT_PRIOR,
+                                      extra_inter_blacklist=_build_blacklist_two_slice(train_dbn))
     t_train_end   = time.perf_counter()
     print("PARENTS of target_t1:", sorted(model_2s.get_parents(f"{TARGET}_t1")))
     print(f"TOTAL PARENTS COUNT: {len(model_2s.get_parents(f'{TARGET}_t1'))}")

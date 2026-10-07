@@ -28,9 +28,14 @@
    clearly better continuous forecast (MAE 3.9 against 5.6 requests/s). At 30 s
    TabPFN is ahead of the plain DBN (0.947 against 0.921 at 4 bins); the DBN
    with chain inference at configuration changes matches it (0.949).
-5. **One thing the DBN still does not do well in continuous terms:** read as a
-   number of requests per second, its forecast is not better than "same as now"
-   (§5.9). The gain is in predicting *which bin*, i.e. in anticipating changes.
+5. **As a number, the bin table alone is not better than "same as now"**, but
+   replacing the target's table by a conditional-median node on the same
+   parents is: 4.14 requests/s against 4.65 for persistence at 1 s (gradient
+   boosting 4.23; TabPFN 3.92 on its test subsample). See §5.9 and §5.13.
+6. **The same recipe works for every variable of the system**, not only
+   `throughput_3`: the other throughputs, the latencies and the queue lengths
+   all beat their AR table at 20 bins (§5.11). And the full pgmpy graph, with
+   the domain constraints in place, learns the service chain by itself (§5.12).
 
 Everything below is the detail: what was fixed (§2), the new tools (§3), how
 models are scored (§4), results (§5), the complete list of options (§6), TabPFN
@@ -57,8 +62,8 @@ models are scored (§4), results (§5), the complete list of options (§6), TabP
 | 13 | Evaluation looped over rows with `iloc` and one inference query per distinct full evidence. | Vectorised; when all parents of the target are observed only those are passed (exact). Also reports accuracy on the steps where the target changes bin. | `dbn/dbn_sweep.py` (`evaluate`) | — |
 | 14 | Mutual-information feature selection on >100k rows would take hours at 1 s. | MI is estimated on 20 000 random training rows. | `dbn/dbn_sweep.py` | — |
 | 15 | Control flag only looked at data quality; meaningless after the reorder (a configuration is constant inside a run). | Looks at cores too; off by default — the exogenous inputs carry the same information. | `dbn/dbn_sweep.py` | — |
-| 16 | `markov_test.py` and `lstm_baseline.py` excluded the target's own past from the inputs; LSTM trained for 100 full-batch steps; both read a hard-coded path; lags crossed runs. | Target history included, run-aware windows and folds, mini-batches, `--csv`. They no longer overwrite the tracked result files. | `analysis/` | both run; see §5.10 |
-| 17 | `markov_order_analysis.py`, `control_variable_check.py`: row-order loaders, lags across runs. | Use the shared loader; lags inside runs; the control check compares the step on which the configuration changes. | `analysis/` | both run; see §5.10 |
+| 16 | `markov_test.py` and `lstm_baseline.py` excluded the target's own past from the inputs; LSTM trained for 100 full-batch steps; both read a hard-coded path; lags crossed runs. | Target history included, run-aware windows and folds, mini-batches, `--csv`. They no longer overwrite the tracked result files. | `analysis/` | both run; see §5.14 |
+| 17 | `markov_order_analysis.py`, `control_variable_check.py`: row-order loaders, lags across runs. | Use the shared loader; lags inside runs; the control check compares the step on which the configuration changes. | `analysis/` | both run; see §5.14 |
 | 18 | The orchestrator does not record its clock or the load it applies. | Writes `rps_log_<...>.csv` (time, orchestrator clock, rps, run tag). **Not tested** — needs a live workbench. | `data_collection/experiment_orchestrator.py` | parses only |
 
 Not changed: `dbn/joint_dbn.py` (still reads a hard-coded path; it already
@@ -314,10 +319,110 @@ number as "current value + expected change of bin value", so that predicting
 The DBN anticipates that a change is coming but can only express its size in
 whole bins (25 requests/s wide at 20 bins, while a typical load step is 5–15).
 With more bins the error falls, but it does not go below plain persistence.
-If the paper's claim is about the value rather than the bin, this is the
-weak point; §6 lists the options that address it (D6, E3).
+§5.13 shows that a conditional-median node on the same parents does.
 
-### 5.10 The analysis scripts, re-run on the corrected data (periodic dataset)
+### 5.11 Every variable as a target (added 7 October, second pass)
+
+One table per variable, same recipe (1 s, forward selection, backoff prior).
+With slice t observed, these tables together are the two-slice DBN: any
+variable at t+1 is predicted from its own parents. Accuracy gain over that
+variable's AR table, pooled over the three datasets, 95% interval in brackets.
+
+| Target | AR accuracy (20 bins) | Reference DBN | Two lags + chain at reconfigurations | BIC + uniform prior |
+|---|---|---|---|---|
+| throughput_1 | 0.912 | +0.009 [0.006, 0.013] | +0.013 [0.010, 0.016] | +0.002 |
+| throughput_2 | 0.888 | +0.012 [0.008, 0.015] | +0.012 [0.009, 0.015] | −0.001 |
+| throughput_3 | 0.875 | +0.033 [0.028, 0.037] | +0.044 [0.038, 0.050] | −0.001 |
+| avg_p_latency_1 | 0.843 | +0.023 [0.020, 0.026] | +0.023 [0.019, 0.026] | +0.003 |
+| avg_p_latency_2 | 0.889 | +0.003 [0.000, 0.006] | +0.009 [0.006, 0.011] | 0 |
+| avg_p_latency_3 | 0.904 | +0.005 [0.003, 0.006] | +0.010 [0.009, 0.012] | 0 |
+| buffer_size_2 (quantile bins) | 0.920 | +0.006 [0.004, 0.008] | +0.007 [0.006, 0.008] | +0.001 |
+| buffer_size_3 (quantile bins) | 0.879 | +0.003 [−0.002, 0.007] | +0.012 [0.010, 0.014] | −0.001 |
+
+- Log-loss improves for every target (−0.06 to −0.21).
+- The gain is largest for `throughput_3` because it is the end of the chain:
+  there is the most upstream information to anticipate it with. `throughput_1`
+  depends almost only on the load and its own service's settings.
+- With 10 bins the gains shrink to +0.005 or less and are not significant for
+  `throughput_2`, `avg_p_latency_3` and the queue lengths — the same bins
+  effect as in §5.2.
+- Chain inference at a reconfiguration works for any throughput: accuracy at
+  those steps goes from 0.23 to 0.67 for `throughput_1` and from 0.20 to 0.53
+  for `throughput_2`. It is not defined for latencies and queues, which keep
+  the plain table there.
+
+### 5.12 Domain constraints (added 7 October, second pass)
+
+In the harness (target `throughput_3`, difference to the reference):
+
+| Constraint | Accuracy | Δ accuracy | Δ log-loss |
+|---|---|---|---|
+| none (reference) | 0.908 | | |
+| **candidates limited to service 3's own variables and `throughput_2`** | 0.915 | **+0.007 [0.005, 0.010]** | −0.014 |
+| the same, with two lags | **0.921** | **+0.013 [0.010, 0.017]** | −0.052 |
+| force `throughput_2(t)` as a parent | 0.908 | 0 (always selected anyway) | 0 |
+| force `throughput_2(t)` and `buffer_size_3(t)` | 0.910 | +0.003 | −0.006 |
+| force the cores and data quality of service 3 | 0.880 | −0.028 | +0.106 |
+| force those and `throughput_2(t)` (5 or 6 parents allowed) | 0.884 | −0.024 | +0.099 |
+
+Restricting what may be a parent helps; forcing the controls in does not —
+inside a run they are constant, so they only split the data into smaller
+tables. (They are what is needed at a reconfiguration, which the chain handles.)
+
+In the full pgmpy graph (`dbn_sweep.py`), checked on a fitted model (1 s,
+20 bins, periodic dataset, last fold):
+
+- All three throughputs are always in the model (they are kept regardless of
+  feature selection), and so are cores, data quality and `rps`.
+- Cores, data quality and `rps` have **no parent** other than their own
+  previous value, and they do appear as parents of the throughputs. This is
+  enforced by the blacklist, and I verified it on the fitted graphs.
+- A rule that existed in the code but was never applied — a later service's
+  throughput is not a parent of an earlier one's — is now applied, both across
+  slices and inside a slice. Before, BIC produced `throughput_2(t) →
+  throughput_1(t+1)`.
+- With these constraints the AIC search returns exactly the physical chain:
+
+      throughput_1(t+1) ← rps(t+1), cores_1(t+1), data_quality_1(t+1)
+      throughput_2(t+1) ← throughput_1(t), throughput_1(t+1), cores_2(t+1), data_quality_2(t+1)
+      throughput_3(t+1) ← throughput_2(t), throughput_3(t), cores_3(t+1), data_quality_3(t+1)
+
+How often each parent of `throughput_3` was selected in the harness
+(15 fits = 3 datasets × 5 folds, reference configuration): `throughput_3(t)`
+15, `throughput_2(t)` 15, `buffer_size_3(t)` 11, a data-quality setting 10,
+a latency 2. `throughput_1` and the cores were never selected for
+`throughput_3`: what they know is already in `throughput_2`.
+
+### 5.13 Numerical forecast (added 7 October, second pass)
+
+Same parents as the table, different target node. Mean absolute error in
+requests/s, pooled over the three datasets.
+
+| Target node | 1 s, 20 bins, reference parents | 1 s, 20 bins, two lags | 1 s, 50 bins, two lags | 30 s, 10 bins |
+|---|---|---|---|---|
+| Persistence (continuous) | 4.65 | 4.65 | 4.65 | 17.6 |
+| Table over bins, read as an expected value | 5.79 | 5.75 | 4.85 | 18.7 |
+| Conditional mean per parent configuration | 4.92 | 4.79 | 4.61 | 18.3 |
+| **Conditional median per parent configuration** | **4.19** | **4.14** | 4.22 | **14.8** |
+| Linear model per regime (conditional linear-Gaussian) | 5.59 | 4.91 | 4.80 | 21.4 |
+| One linear model (linear-Gaussian, as in DYNOTEARS) | 5.69 | 5.66 | 5.63 | 22.8 |
+| *Gradient boosting (for reference)* | 4.23 | | | 13.5 |
+| *TabPFN v2 (for reference; its own test subsample, persistence 4.51 / 17.6 there)* | 3.92 | | | 11.3 |
+
+- The conditional-median node beats persistence by 0.52 requests/s
+  [0.36, 0.68] at 1 s and is level with gradient boosting. TabPFN is 0.59
+  below persistence on its subsample, so the two are close.
+- Means are pulled by rare large jumps; linear models cannot represent the
+  saturated / unsaturated regimes. The median per parent configuration is the
+  simple thing that works.
+- At 30 s the gain comes entirely from the reconfiguration steps (95 against
+  126 requests/s there); inside a run the median node (6.0) is slightly worse
+  than persistence (5.5). TabPFN and gradient boosting are better at 30 s.
+
+So the claim "the DBN predicts throughput" can be made either way: by bins
+(accuracy, log-loss) or as a number (MAE), with the same structure.
+
+### 5.14 The analysis scripts, re-run on the corrected data (periodic dataset)
 
 - `control_variable_check.py` (30 s, quartile bins): the target changes bin on
   70.7% of the steps where the configuration changes, against 3.6% otherwise.
@@ -349,7 +454,7 @@ not yet run, **N** not implemented.
 | A6 | Counters | rate / drop / keep as level | fixed to rate (`data.load_wide(counters=…)`) | A for the other two |
 | A7 | Configuration changes in training / scoring | in / out | T (ofat) | — |
 | A8 | Cross-validation | expanding / blocked | T (cv) | same conclusion |
-| A9 | Target | throughput_3 / _1 / _2 / all jointly | A (`--set target=…`; `joint_dbn.py`) | |
+| A9 | Target | every non-exogenous variable, one table each | T (targets) | all beat AR at 20 bins, §5.11 |
 | A10 | Training data | one workload / pooled workloads / train on one, test on another | N | the three dumps share one configuration schedule, which limits what pooling can show |
 
 ### B. Discretisation
@@ -388,7 +493,7 @@ not yet run, **N** not implemented.
 | D7 | Forced edges | self-loop on / off | T | no effect |
 | D8 | Which parents the target may take (`TARGET_PARENTS_ONLY`) | AR only / observed / learned | A (`dbn_sweep.py`) | "observed" is the corrected default |
 | D9 | Feature selection before structure learning (Markov blanket, mRMR, PCA; K) | | A (`dbn_sweep.py`) | the harness lets the search choose instead |
-| D10 | Domain blacklist (layers) | on / off | A | |
+| D10 | Domain constraints | candidates limited to the target's service and its upstream flow; forced parents; chain direction between throughputs | T (constraints) | restricting candidates +0.007; forcing controls −0.028; §5.12 |
 | D11 | Constraint-based and hybrid learners (PC, PCMCI+, MMHC), GES, K2 score, non-linear NOTEARS | | N | |
 | D12 | Full dynamic chain: the chain of D6 with lagged parents, used for every step, not only at configuration changes | | N | the natural next model |
 
@@ -400,7 +505,8 @@ not yet run, **N** not implemented.
 | E2 | Prior strength | 1, 3, 10, 30, 100 | T | flat between 3 and 30 |
 | E3 | Target as change of bin | level / delta | T | no effect |
 | E4 | Separate table for configuration changes | same / second table / chain | T | see D6 |
-| E5 | Structured tables (noisy-MAX, tree-shaped, logistic) or a continuous node for the target (conditional Gaussian) | | N | would address §5.9 |
+| E5 | Continuous target node on the same parents | conditional mean / conditional median / linear per regime / linear | T (numeric) | conditional median beats persistence, §5.13 |
+| E6 | Structured tables (noisy-MAX, tree-shaped, logistic) | | N | |
 
 ### F. Reference models
 
@@ -543,7 +649,7 @@ TabPFN run without this correction was discarded.
   runs only; test runs are never used to choose parents.
 - **The pgmpy sweep's grid** was not re-run in full (≈ 20 h per dataset at 1 s);
   only the small grid in §2.
-- **Not explored:** D11, D12, E5, A9, A10, B7, C6; tuning of DYNOTEARS;
+- **Not explored:** D11, D12, E6, A10, B7, C6; tuning of DYNOTEARS;
   TabPFN v3.5; a context selection for TabPFN other than random.
 
 ### Suggested next steps
@@ -555,8 +661,8 @@ TabPFN run without this correction was discarded.
    is the version of the model that is both interpretable and uses inference,
    and §5.5 suggests it will carry the configuration-change gain into every
    setting.
-3. Decide whether the paper's claim is about bins or about values. If values,
-   E5 is needed (§5.9).
+3. Report both the bin-based scores and the MAE of the conditional-median node
+   (§5.13); the structure is the same for both.
 4. Collect one dump with a different seed, and record the stabilisation period.
 5. Get access to TabPFN v3.5 and rerun §7.
 
