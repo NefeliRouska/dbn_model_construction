@@ -6,7 +6,9 @@ every test that was run. It is kept up to date; the newest entries are in the
 log at the end.
 
 - Branch: `audit-fixes` (not merged into `main`).
-- Full result tables and discussion: [2026-10-07_fixes_ablation_tabpfn.md](2026-10-07_fixes_ablation_tabpfn.md).
+- Full result tables and discussion:
+  [2026-10-07_fixes_ablation_tabpfn.md](2026-10-07_fixes_ablation_tabpfn.md) (fixes, option studies, TabPFN v2) and
+  [2026-10-07_part2_regimes_rollout_whatif.md](2026-10-07_part2_regimes_rollout_whatif.md) (regimes, roll-out, unseen configurations, capacity node, transfer).
   This document does not repeat them; it tells you what is different and where to look.
 
 ---
@@ -200,6 +202,13 @@ Outputs are in `results/ablation/` and `results/tabpfn/` unless stated.
 | 19 | `memory_ablation.py` | periodic, 30 s, 10 bins | `results/memory_ablation/` | runs; forced velocity columns are refused (table too large) |
 | 20 | `markov_order_analysis.py`, `control_variable_check.py`, `markov_test.py`, `lstm_baseline.py` | periodic | report §5.14 | all run; conclusions in §5 above |
 
+| 21 | `regime_study.py`: one global model vs regime-specific tables / structures; regime never seen in training; detection from surprise | all | part 2 §1, `results/regimes/` | regimes change values, not the core structure; unseen regime −4 to −12 points; reconfigurations detected with AUC 0.88 |
+| 22 | `dbn/rollout.py`: the chain as one model, unrolled 1–30 s, seven structures, vs direct tables | all | part 2 §2, `results/rollout/` | good to ~2 s, then direct tables win; a slow level variable helps |
+| 23 | `whatif_study.py`: prediction for configurations never trained on | all | part 2 §3, `results/whatif/` | plain tables 0.45; capacity node with noisy-min prior 0.73; boosting 0.46–0.57 |
+| 24 | `ablation.py --study capacity`: capacity node in the dynamic model | all | part 2 §4 | accuracy at reconfigurations 0.42 → 0.65 (1 s), 0.74 → 0.84 (30 s, 4 bins) |
+| 25 | `transfer_study.py`: train on one workload, test on another; pooled | all | part 2 §5, `results/transfer/` | varying-load models transfer; pooling best |
+| — | TabPFN v3.5 | — | part 2 §6 | **not run**: Prior Labs licence key missing on this machine |
+
 Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
 1 s), `joint_dbn.py`, `visualize_sweep.py`, the figures in `results/figures/`.
 
@@ -213,10 +222,10 @@ Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
 2. Use 1 s and 20–50 bins. Report accuracy and log-loss against AR **on the
    same bins**, accuracy at bin changes, and the MAE of the conditional-median
    read-out. Do not compare accuracies across different bin counts.
-3. Build the chain model as the whole model (not only at reconfigurations):
-   `throughput_i(t+1) ← throughput_{i-1}(t), throughput_i(t), cores_i, data_quality_i`,
-   with inference through the chain. The pgmpy search already finds this
-   structure; the harness shows each piece works.
+3. Use the capacity node (`capacity=True`, `on_change="capchain"`): it is what
+   lets the model predict configurations it has not seen (part 2 §3–4). The
+   chain as one unrolled model was built and tested (part 2 §2): it works for
+   1–2 s ahead; for longer horizons train the tables for that horizon.
 4. Collect one dump with a different seed (the three dumps share one
    configuration schedule) and record the 30 s stabilisation period, which is
    currently lost.
@@ -227,6 +236,24 @@ Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
 ## 9. Log
 
 Newest first.
+
+### 2026-10-07 (third pass, evening)
+
+- New scripts: `analysis/regime_study.py`, `analysis/whatif_study.py`,
+  `analysis/transfer_study.py`, `dbn/rollout.py` (tests 21–25).
+- `dbn/data.py`: `fit_capacity_rate`, `add_capacity`; `capacity_*` columns are
+  treated as exogenous. `dbn/ablation.py`: options `capacity=True` and
+  `on_change="capchain"` (chain with capacity nodes and a noisy-min prior),
+  study `capacity`.
+- TabPFN v3.5 attempted. Hugging Face access works; the run is blocked by
+  TabPFN's own licence step on ux.priorlabs.ai (no key in
+  `~/.cache/tabpfn/auth_token`). This Python also lacks a certificate bundle,
+  which made the library report it as a Hugging Face error: run TabPFN
+  commands with `SSL_CERT_FILE=$(python -m certifi)`.
+- Intermediate result files of scripts that were re-run while being developed
+  were moved to `results/_superseded/` (git-ignored); they can be deleted.
+- Nothing longer than a few minutes was left running. Jobs for the other
+  machine are listed in part 2 §7.
 
 ### 2026-10-07 (second pass)
 

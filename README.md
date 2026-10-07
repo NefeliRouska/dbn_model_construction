@@ -25,6 +25,10 @@ holds the modelling code, its results, and its git history.
 | `dbn/joint_dbn.py` | Single joint DBN for all three throughput targets (not updated since April 2026; still reads a hard-coded path). |
 | `analysis/ablation_report.py` | Effect size and run-level bootstrap significance of every configuration of an `ablation.py` study, pooled over datasets. |
 | `analysis/tabpfn_baseline.py`, `analysis/tabpfn_report.py` | DBN versus TabPFN (and gradient boosting) on identical inputs, folds and test samples; pooled summary with paired intervals. |
+| `dbn/rollout.py` | The DBN as one model of the chain (three throughputs, two queues), unrolled over several seconds with particles; compared with tables trained directly for each horizon. |
+| `analysis/regime_study.py` | Regimes (bottleneck location, load level): global vs regime-specific models, unseen regimes, detection from the model's surprise. |
+| `analysis/whatif_study.py` | Prediction for configurations never seen in training; the learned capacity node. |
+| `analysis/transfer_study.py` | Train on one workload, test on another. |
 | `analysis/` (rest) | Markov-order analysis, Markov test, control-variable check, statistical significance of a sweep, LSTM baseline, sweep visualisation. |
 | `results/` | Outputs: `sweeps/` (result tables), `models/` (saved top models), `logs/`, `figures/`, `memory_ablation/`, `ablation/`, `tabpfn/`. |
 | `docs/` | `HANDOVER.md`: what changed and every test run (kept up to date). Dated reports with the full result tables. |

@@ -67,6 +67,9 @@ DEFAULTS = dict(
     velocity="none",        # none | sign | binned   (v@t - v@t-1 of every variable)
     relative=False,         # add v@t - y@t for the upstream throughputs and the load
     exog="controls+load",   # none | controls | controls+load   (values at t+h)
+    capacity=False,         # add capacity_i = cores_i x rate(data_quality_i) as exogenous
+                            # variables (rate learned on the first chunk of runs, which is
+                            # training data in every expanding fold; see data.fit_capacity_rate)
     # --- discretisation ---
     n_bins=20,              # target (and throughput family when shared_bins)
     disc="uniform",         # target: uniform | quantile | kmeans
@@ -87,6 +90,8 @@ DEFAULTS = dict(
     on_change="same",       # what predicts the first step after a reconfiguration:
                             # same: the model above | static: a second table over the
                             # new configuration | chain: inference in the service chain
+                            # | capchain: the chain with capacity nodes and a noisy-min
+                            #   prior (needs capacity=True)
 )
 
 MAX_HISTORY = {1: 5, 5: 5, 10: 3, 30: 3}   # rows of history reserved per granularity
@@ -111,7 +116,8 @@ def make_cfg(**kw):
 # SAMPLES: one row per (t, t+h) pair, continuous values
 # ============================================================
 def is_core(col):
-    return col.split("_")[0] in ("throughput", "cores", "data", "buffer", "avg") or col == D.LOAD_COL
+    return col.split("_")[0] in ("throughput", "cores", "data", "buffer", "avg", "capacity") \
+        or col == D.LOAD_COL
 
 
 class Samples:
@@ -236,13 +242,14 @@ class Binner:
         # The throughputs and the load are the same quantity measured at different
         # points of the chain: one set of bin edges for all of them. It is the
         # target's own edges when the target is one of them.
-        flow = {v for v in S.vars if v.startswith("throughput_") or v == D.LOAD_COL}
+        flow = {v for v in S.vars if v.startswith(("throughput_", "capacity_")) or v == D.LOAD_COL}
         self.shared_edges = {S.target: self.y_edges}
         if cfg["shared_bins"]:
             if S.target in flow:
                 edges = self.y_edges
             else:
-                pooled = np.concatenate([S.cols[f"{v}@t"][train] for v in sorted(flow)])
+                pooled = np.concatenate([S.cols[f"{v}@t"][train] for v in sorted(flow)
+                                         if not v.startswith("capacity_")])
                 edges = _edges(pooled, nbx, "uniform")
             self.shared_edges.update({v: edges for v in flow if v != S.target})
         self.shared = set(self.shared_edges)
@@ -741,6 +748,15 @@ def numeric_models(S, cfg, binner, tr, te, parents):
     return out
 
 
+def noisy_min_table(n_bins, spread=0.1):
+    """Prior of a flow given the bin of min(upstream, capacity): that bin, a little on its neighbours."""
+    T = np.eye(n_bins) * (1 - spread)
+    for k in range(n_bins):
+        nb = [j for j in (k - 1, k + 1) if 0 <= j < n_bins]
+        T[k, nb] += spread / len(nb)
+    return T
+
+
 def chain_predict(S, cfg, binner, tr, te):
     """
     The service chain written as a same-slice Bayesian network and queried by
@@ -763,16 +779,31 @@ def chain_predict(S, cfg, binner, tr, te):
     chain = [(f"{D.LOAD_COL}@t+h" if i == 1 else f"throughput_{i - 1}@t+h",
               None if i == last else f"throughput_{i}@t+h", str(i)) for i in range(1, last + 1)]
     P_up = None
+    noisy_min = cfg["on_change"] == "capchain"
     for up, node, i in chain:
-        ctrl = [f"cores_{i}@t+h", f"data_quality_{i}@t+h"]
+        ctrl = [f"capacity_{i}@t+h"] if noisy_min else [f"cores_{i}@t+h", f"data_quality_{i}@t+h"]
         y = c_tr.y if node is None else c_tr(node)[0]
         par = [c_tr(c) for c in [up] + ctrl]
-        cpt = CPT([c for c, _ in par], [k for _, k in par], y, K, "bdeu", cfg["ess"])
         ctrl_te = [c_te(c)[0] for c in ctrl]
+        if noisy_min:
+            # A service emits what it receives or what it can process, whichever is
+            # smaller. min(upstream, capacity) enters as a deterministic extra parent:
+            # it adds no parent combination, it centres the prior of the table.
+            codes = [c for c, _ in par] + [np.minimum(par[0][0], par[1][0])]
+            cpt = CPT(codes, [k for _, k in par] + [K], y, K, "backoff", cfg["ess"],
+                      (2, noisy_min_table(K)))
+
+            def predict(up_code, cpt=cpt, ctrl_te=ctrl_te):
+                return cpt.predict([up_code] + ctrl_te + [np.minimum(up_code, ctrl_te[0])], n)
+        else:
+            cpt = CPT([c for c, _ in par], [k for _, k in par], y, K, "bdeu", cfg["ess"])
+
+            def predict(up_code, cpt=cpt, ctrl_te=ctrl_te):
+                return cpt.predict([up_code] + ctrl_te, n)
         if P_up is None:                                   # the load is observed
-            P_up = cpt.predict([c_te(up)[0]] + ctrl_te, n)
+            P_up = predict(c_te(up)[0])
         else:                                              # sum over the unobserved upstream flow
-            P_up = sum(P_up[:, [s]] * cpt.predict([np.full(n, s)] + ctrl_te, n) for s in range(K))
+            P_up = sum(P_up[:, [s]] * predict(np.full(n, s)) for s in range(K))
     return P_up
 
 
@@ -827,10 +858,11 @@ def run_fold(S, cfg, tr, te, extra_models=()):
         Ps = sc.predict([lv_te(p)[0] for p in sp], n_te)
         P = np.where(masks["xrun"][:, None], Ps, P)
         info["static_parents"] = sp
-    elif cfg["on_change"] == "chain" and masks["xrun"].any() and S.target.startswith("throughput_"):
+    elif cfg["on_change"] in ("chain", "capchain") and masks["xrun"].any() \
+            and S.target.startswith("throughput_"):
         P = np.where(masks["xrun"][:, None], chain_predict(S, cfg, binner, tr, te), P)
-    elif cfg["on_change"] not in ("same", "static", "chain"):
-        raise ValueError("on_change must be same | static | chain")
+    elif cfg["on_change"] not in ("same", "static", "chain", "capchain"):
+        raise ValueError("on_change must be same | static | chain | capchain")
 
     out = {}
     run_te, y1te, y0c = S.run[te], S.y1[te], S.y0[te]
@@ -1035,7 +1067,22 @@ def study_numeric():
     return c
 
 
-STUDIES = {"targets": study_targets, "constraints": study_constraints, "numeric": study_numeric,
+def study_capacity():
+    """A learned capacity node per service, inside a run and at reconfigurations."""
+    c = []
+    for g, b in itertools.product((1, 30), (4, 10, 20)):
+        base = dict(granularity=g, n_bins=b, ar_order=2, other_lags=2)
+        c.append(make_cfg(**base, on_change="chain"))
+        c.append(make_cfg(**base, capacity=True, on_change="chain"))
+        c.append(make_cfg(**base, capacity=True, on_change="capchain"))
+        c.append(make_cfg(**base, capacity=True, on_change="capchain", pool="local"))
+    for t in ("throughput_1", "throughput_2"):
+        c.append(make_cfg(target=t, ar_order=2, other_lags=2, on_change="chain"))
+        c.append(make_cfg(target=t, ar_order=2, other_lags=2, capacity=True, on_change="capchain"))
+    return c
+
+
+STUDIES = {"capacity": study_capacity, "targets": study_targets, "constraints": study_constraints, "numeric": study_numeric,
            "best": study_best, "config_change": study_config_change, "ofat": study_ofat, "bins_granularity": study_bins_granularity, "horizon": study_horizon,
            "interactions": study_interactions, "cv": study_cv, "refs": study_refs}
 
@@ -1046,11 +1093,16 @@ STUDIES = {"targets": study_targets, "constraints": study_constraints, "numeric"
 _frame_cache = {}
 
 
-def load_frame(csv, target, granularity):
-    key = (str(csv), target, granularity)
+def load_frame(csv, target, granularity, capacity=False):
+    key = (str(csv), target, granularity) + (("capacity",) if capacity else ())
     if key not in _frame_cache:
-        df = D.load_wide(csv, target, verbose=False)
-        _frame_cache[key] = D.aggregate(df, granularity)
+        df = D.aggregate(D.load_wide(csv, target, verbose=False), granularity)
+        if capacity:
+            first_chunk = D.make_temporal_folds(df[D.META_COLS], k=5)[0][0]["run_id"].unique()
+            rate, line = D.fit_capacity_rate(df, first_chunk)
+            df = D.add_capacity(df, rate, line)
+            df = df[D.META_COLS + [c for c in D.feature_cols(df) if c != target] + [target]]
+        _frame_cache[key] = df
     return _frame_cache[key]
 
 
@@ -1058,9 +1110,9 @@ _sample_cache = {}
 
 
 def get_samples(csv, cfg):
-    key = (str(csv), cfg["target"], cfg["granularity"], cfg["horizon"], cfg["cross_run"])
+    key = (str(csv), cfg["target"], cfg["granularity"], cfg["horizon"], cfg["cross_run"], cfg["capacity"])
     if key not in _sample_cache:
-        df = load_frame(csv, cfg["target"], cfg["granularity"])
+        df = load_frame(csv, cfg["target"], cfg["granularity"], cfg["capacity"])
         S = Samples(df, cfg["target"], cfg["horizon"], cfg["cross_run"],
                     MAX_HISTORY.get(cfg["granularity"], 3))
         S.meta = df[D.META_COLS]

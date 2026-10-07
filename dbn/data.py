@@ -34,7 +34,11 @@ LOAD_COL = "rps"
 
 # Variables the operator (or the workload generator) sets from outside. Their
 # value at t+h is an input of the prediction, not something to predict.
-CONTROL_PREFIXES = ("cores_", "data_quality_")
+CONTROL_PREFIXES = ("cores_", "data_quality_", "capacity_")
+
+# A service is saturated in a run when it emits less than this share of what
+# it receives (run means).
+SATURATED_BELOW = 0.97
 
 _COUNTER_RE = re.compile(r"^(?P<base>.+)_total_(?P<idx>\d+)$")
 
@@ -238,3 +242,74 @@ def two_slice_frame(df, pairs):
     df_t = df.iloc[i].reset_index(drop=True).add_suffix("_t")
     df_t1 = df.iloc[j].reset_index(drop=True).add_suffix("_t1")
     return pd.concat([df_t, df_t1], axis=1)
+
+
+def fit_capacity_rate(df, runs=None):
+    """
+    Processing rate of ONE core as a function of data quality.
+
+    In these services the capacity is, to a very good approximation,
+    cores x rate(data_quality), with the same rate function for the three
+    services (they run the same code). It is learned from run means:
+
+      - in a run where a service is saturated its throughput IS its capacity:
+        rate = median of throughput / cores over those runs, per quality level;
+      - in a run where it is not saturated its throughput is a lower bound of
+        its capacity. At low quality settings services almost never saturate;
+        the rate is at least the largest unsaturated throughput / cores
+        observed at that level, and exactly that when fewer than three
+        saturated runs exist;
+      - a higher quality setting never makes a core faster: the rate is made
+        non-increasing in data quality.
+
+    Levels with no run at all are filled from a straight line fitted to
+    log(rate) against log(data_quality).
+
+    runs: run ids to learn from (default: all runs of df).
+    Returns ({quality: rate}, (slope, intercept) of the log-log line).
+    """
+    if runs is not None:
+        df = df[df["run_id"].isin(runs)]
+    r = df.groupby("run_id").mean(numeric_only=True)
+    samples = []
+    for i in (1, 2, 3):
+        up = r[LOAD_COL] if i == 1 else r[f"throughput_{i - 1}"]
+        samples.append(pd.DataFrame({
+            "dq": r[f"data_quality_{i}"], "rate": r[f"throughput_{i}"] / r[f"cores_{i}"],
+            "saturated": r[f"throughput_{i}"] < SATURATED_BELOW * up}))
+    samples = pd.concat(samples)
+    sat = samples[samples["saturated"]].groupby("dq")["rate"].agg(["median", "size"])
+    # An unsaturated service emits exactly what it receives, which cannot exceed
+    # its capacity: the largest such throughput per core is a (noise-free) lower
+    # bound of the rate. It decides wherever saturation was rarely observed, and
+    # wherever the runs flagged as saturated contradict it.
+    bound = samples[~samples["saturated"]].groupby("dq")["rate"].max()
+    measured = sat.loc[sat["size"] >= 3, "median"]
+    rate = pd.concat([measured, bound], axis=1).max(axis=1)
+    if rate.isna().any() or len(rate) == 0:
+        rate = rate.fillna(samples.groupby("dq")["rate"].max())
+    rate = rate.sort_index()[::-1].cummax()[::-1]          # non-increasing in data quality
+
+    levels = np.unique(np.concatenate([df[f"data_quality_{i}"].unique() for i in (1, 2, 3)]))
+    if len(rate) >= 2:
+        slope, intercept = np.polyfit(np.log(rate.index.to_numpy(dtype=float)), np.log(rate.to_numpy()), 1)
+    else:
+        slope, intercept = 0.0, float(np.log(rate.iloc[0]))
+    return ({float(q): float(rate[q]) if q in rate.index else float(np.exp(intercept + slope * np.log(q)))
+             for q in levels}, (float(slope), float(intercept)))
+
+
+def add_capacity(df, rate, line=None):
+    """Columns capacity_i = cores_i x rate(data_quality_i): what service i can emit per second."""
+    df = df.copy()
+
+    def lookup(q):
+        if q in rate:
+            return rate[q]
+        slope, intercept = line
+        return float(np.exp(intercept + slope * np.log(q)))
+
+    for i in (1, 2, 3):
+        df[f"capacity_{i}"] = df[f"cores_{i}"] * df[f"data_quality_{i}"].map(lookup)
+    return df
+
