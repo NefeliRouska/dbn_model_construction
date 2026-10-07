@@ -207,6 +207,10 @@ Outputs are in `results/ablation/` and `results/tabpfn/` unless stated.
 | 23 | `whatif_study.py`: prediction for configurations never trained on | all | part 2 §3, `results/whatif/` | plain tables 0.45; capacity node with noisy-min prior 0.73; boosting 0.46–0.57 |
 | 24 | `ablation.py --study capacity`: capacity node in the dynamic model | all | part 2 §4 | accuracy at reconfigurations 0.42 → 0.65 (1 s), 0.74 → 0.84 (30 s, 4 bins) |
 | 25 | `transfer_study.py`: train on one workload, test on another; pooled | all | part 2 §5, `results/transfer/` | varying-load models transfer; pooling best |
+| 26 | `adaptation_study.py`: detection with all nodes; recovery when tables are updated after a new regime appears | all | part 2 §9–10, `results/adaptation/` | reconfigurations caught 93% at 1% false alarms with all nodes (73% with one); updating tables recovers most of the loss |
+| 27 | `ablation.py --study recommended`: recommended configuration for all eight variables, with numeric read-outs | all | part 2 §11 | every variable beats AR; conditional-median MAE below persistence for 7 of 8 |
+| 28 | `ablation.py --study extras`: slow level variable in the one-step model; DYNOTEARS penalty | all | part 2 §12 | level: only helps at 5–10 s; DYNOTEARS best at λ = 0.02, still behind |
+| 29 | `whatif_study.py --tabpfn v2` | all | part 2 §3 | TabPFN v2 does not generalise to unseen configurations for services 2 and 3 (0.41 against 0.73) |
 | — | TabPFN v3.5 | — | part 2 §6 | **not run**: Prior Labs licence key missing on this machine |
 
 Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
@@ -236,6 +240,16 @@ Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
 ## 9. Log
 
 Newest first.
+
+### 2026-10-07 (fourth pass, night)
+
+- New: `analysis/adaptation_study.py` (tests 26); studies `recommended` and
+  `extras` and options `level=True`, `dynotears_lambda` in `dbn/ablation.py`
+  (tests 27–28); `--tabpfn` in `whatif_study.py` uses the median forecast
+  (test 29; a first run with TabPFN's mean was discarded — the mean is far off
+  for the skewed throughput of services 2 and 3).
+- Part 2 report: sections 9–12 added, summary extended.
+- Still no Prior Labs licence key on this machine: TabPFN v3.5 not run.
 
 ### 2026-10-07 (third pass, evening)
 

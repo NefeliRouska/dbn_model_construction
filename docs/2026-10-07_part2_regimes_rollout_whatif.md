@@ -28,6 +28,20 @@ target is `throughput_3`, 1 s, 20 bins, two lags, unless stated.
    the load. Pooling the three workloads is best everywhere (§5).
 6. **TabPFN v3.5: not run.** The Prior Labs licence key was not on this machine
    during the session (§6).
+7. **Detection works much better with the whole network than with one
+   variable.** Summing the surprise of all eight nodes, an unannounced
+   reconfiguration is caught 93% of the time at 1% false alarms (73% with
+   `throughput_3` alone); an unseen saturation regime is separated with AUC
+   0.98 (0.76) (§9).
+8. **Adaptation is cheap.** After a new regime appears, re-estimating the
+   tables on the data seen so far recovers most of the lost accuracy;
+   re-running the parent search recovers nearly all of it (§10).
+9. **Recommended configuration, all eight variables** (§11): two lags, parents
+   limited to the variable's service and its input, capacity node, capacity
+   chain at reconfigurations, conditional-median read-out. For `throughput_3`:
+   accuracy 0.922 against AR 0.875 at 1 s; MAE 3.94 requests/s against 4.65 for
+   persistence (gradient boosting 4.23, TabPFN v2 3.92 on its subsample). At
+   30 s: MAE 10.4 against 17.6 for persistence and 11.3 for TabPFN v2.
 
 ---
 
@@ -171,6 +185,7 @@ Results on the unseen configurations (15 480 rows):
 | Min rule: flow_i = min(upstream, capacity_i), no tables | **0.89 / 2.2** | 0.74 / **19** | 0.69 / **24** |
 | Gradient boosting on (load, cores, quality) | 0.83 / 6.0 | 0.53 / 31 | 0.46 / 38 |
 | Gradient boosting on (load, capacities) | 0.92 / 2.3 | 0.65 / 25 | 0.57 / 33 |
+| TabPFN v2 on (load, cores, quality), median forecast | **0.93** / 2.3 | 0.51 / 34 | 0.41 / 46 |
 
 - A table treats `cores = 4` and `cores = 5` as unrelated labels, so it has
   nothing to say about a combination it has not seen (uniform prediction).
@@ -182,6 +197,12 @@ Results on the unseen configurations (15 480 rows):
   chain beat gradient boosting here.
 - The deterministic min rule has the lowest error in requests/s; the
   probabilistic chain has the best bin accuracy and gives a distribution.
+- TabPFN v2 is very good for the first service (whose throughput depends on
+  three inputs) and no better than gradient boosting for the third (seven
+  inputs, and a bottleneck that can be anywhere): without the capacity
+  structure, neither generalises to unseen combinations. Its mean forecast is
+  much worse than its median here (MAE 80 against 46 for `throughput_3`); the
+  median is what is reported.
 
 ## 4. Capacity node in the dynamic model
 
@@ -255,13 +276,105 @@ The other machine needs the three raw dumps (or the regenerated
 `data/dbn_wide_*.csv`, 135 MB each), `pip install -r requirements.txt`, and
 for TabPFN the two logins.
 
+## 9. Detection with the whole network
+
+`analysis/adaptation_study.py --part detection`. Each of the eight
+non-exogenous variables has its own table and its own surprise; the alarm
+score is their sum.
+
+**Unannounced reconfiguration, single step** (the models are not told the new
+configuration):
+
+| Score | AUC | Caught at 1% false alarms |
+|---|---|---|
+| `throughput_3` only | 0.880 | 73% |
+| the three throughputs | 0.915 | 84% |
+| **all eight nodes** | **0.984** | **93%** |
+
+**A bottleneck regime that was not in the training data, per run** (AUC):
+
+| Unseen regime | Surprise, target only | Surprise, all nodes | Miscalibration, all nodes |
+|---|---|---|---|
+| s1 (service 1 saturates) | 0.76 | **0.98** | 0.96 |
+| s23 (service 2 or 3 saturates) | **0.80** | 0.64 | 0.62 |
+| none (nothing saturates) | 0.60 | 0.30 | **0.79** |
+
+- Summed surprise is an excellent detector when the new regime is *harder*
+  than what the model knows (`s1`).
+- When the new regime is *easier* (`none`: nothing saturates, everything is
+  steady) the runs are less surprising than the known ones, and plain surprise
+  points the wrong way (AUC 0.30). "Miscalibration" — how far the surprise is
+  from the entropy the model itself predicted, in absolute value — catches
+  both directions (0.79 and 0.96).
+- `s23` is rare (≈60 runs per dataset) and affects mainly service 3; adding the
+  other nodes dilutes it. A detector per service, or a weighted sum, is the
+  next thing to try.
+
+## 10. Adapting after a new regime appears
+
+`analysis/adaptation_study.py --part adaptation`. The `throughput_3` model is
+trained on the first half of the runs without regime r; the second half then
+arrives run by run. Accuracy on the runs of r once more than ten of them have
+been seen:
+
+| Regime that was missing | Never updated | Tables re-estimated every 5 runs | + parents searched again every 20 runs | Regime was in the training data |
+|---|---|---|---|---|
+| s1 | 0.786 | 0.888 | 0.913 | 0.926 |
+| none | 0.931 | 0.964 | 0.965 | 0.975 |
+| s23 | 0.824 | 0.845 | 0.832 | 0.841 |
+
+(log-loss for s1: 0.848 → 0.387 → 0.312, against 0.258.)
+
+The tables are counts, so "updating the model" is just adding the new
+observations; no retraining procedure is needed. For `s1`, updating recovers
+about three quarters of the gap and re-searching the structure most of the
+rest. This is the "adjust the model when a regime change is detected" loop in
+its simplest form: §9 raises the alarm, this section is the response.
+
+## 11. Recommended configuration, for every variable
+
+`dbn/ablation.py --study recommended`: two lags of every variable; parents
+limited to the variable's own service and what flows into it; capacity node;
+capacity chain with noisy-min prior at reconfigurations; conditional-median
+node for the numeric forecast. 1 s, 20 bins:
+
+| Target | Accuracy: AR | DBN | gain [95%] | MAE: persistence | DBN table | **DBN conditional median** |
+|---|---|---|---|---|---|---|
+| throughput_1 | 0.912 | 0.928 | +0.016 [0.013, 0.018] | 1.57 | 1.72 | **1.26** |
+| throughput_2 | 0.888 | 0.897 | +0.009 [0.005, 0.014] | 4.21 | 5.24 | **3.88** |
+| throughput_3 | 0.875 | **0.922** | +0.047 [0.042, 0.053] | 4.65 | 5.47 | **3.94** |
+| avg_p_latency_1 | 0.843 | 0.868 | +0.025 [0.022, 0.028] | 0.426 | 0.454 | **0.389** |
+| avg_p_latency_2 | 0.889 | 0.897 | +0.008 [0.006, 0.011] | 0.378 | 0.415 | **0.354** |
+| avg_p_latency_3 | 0.904 | 0.914 | +0.011 [0.009, 0.012] | 0.304 | 0.362 | **0.282** |
+| buffer_size_2 | 0.920 | 0.925 | +0.005 [0.004, 0.006] | 40.1 | 40.6 | **32.6** (linear per regime: 26.8) |
+| buffer_size_3 | 0.879 | 0.890 | +0.011 [0.008, 0.013] | **24.7** | 32.5 | 25.8 (linear per regime: 23.7) |
+
+With 50 bins the gains over AR are larger (`throughput_3` +0.071,
+`throughput_2` +0.039, `avg_p_latency_1` +0.036). For `throughput_3` at 30 s:
+accuracy 0.959 / 0.926 / 0.889 with 4 / 10 / 20 bins (AR 0.920 / 0.880 /
+0.837), conditional-median MAE 11.2 / 10.8 / 10.4 requests/s (persistence
+17.6; TabPFN v2 11.3 and gradient boosting 13.5 on the same test rows).
+
+The queue lengths are the one family where a linear node does better than the
+median: a queue grows or shrinks by (input − output) every second, which is
+linear.
+
+## 12. Smaller tests
+
+- **Slow level variable in the one-step model** (`level=True`): no gain one
+  second ahead (−0.002); +0.002 to +0.007 accuracy at 5 and 10 s. It matters
+  for the unrolled model (§2), not for direct tables.
+- **DYNOTEARS penalty** λ ∈ {0.002, 0.005, 0.02, 0.05, 0.1}: gain over AR
+  +0.014 to +0.020, best at 0.02. It stays behind the discrete searches at
+  every setting.
+
 ## 8. Open
 
-- Combine the surprise of all DBN nodes for regime / fault detection (§1).
+- Detection: per-service or weighted combinations of node surprises; a
+  sequential test (CUSUM) on the summed surprise instead of one step or one
+  run mean; real injected faults rather than reconfigurations.
 - Capacity node inside the roll-out with the noisy-min prior (only the plain
   forced-parent form was tried, §2).
-- The slow level variable inside the one-step model and the harness (it was
-  selected by the search in some folds, so it may help one step ahead too).
 - Rate function for quality 100 and 200 rests on lower bounds only; runs that
   saturate at low quality (more load, or fewer cores) would pin it down.
 - The capacity estimator matters: three variants tried during the session

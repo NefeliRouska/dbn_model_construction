@@ -67,6 +67,8 @@ DEFAULTS = dict(
     velocity="none",        # none | sign | binned   (v@t - v@t-1 of every variable)
     relative=False,         # add v@t - y@t for the upstream throughputs and the load
     exog="controls+load",   # none | controls | controls+load   (values at t+h)
+    level=False,            # add level_<throughput>: its exponential moving average (weight
+                            # LEVEL_ALPHA on the newest row), a slow state variable
     capacity=False,         # add capacity_i = cores_i x rate(data_quality_i) as exogenous
                             # variables (rate learned on the first chunk of runs, which is
                             # training data in every expanding fold; see data.fit_capacity_rate)
@@ -77,6 +79,7 @@ DEFAULTS = dict(
     disc_x="quantile",      # other variables: uniform | quantile | kmeans
     shared_bins=True,       # throughput_1/2 and rps use the target's bin edges
     # --- structure ---
+    dynotears_lambda=0.02,  # L1 penalty of engine=dynotears
     engine="cv-forward",    # ar | fixed | hc-bic | hc-bic-obs | hc-aic | hc-bdeu
                             # | cv-forward | cmi | lasso | dynotears
     max_parents=4,
@@ -95,6 +98,7 @@ DEFAULTS = dict(
 )
 
 MAX_HISTORY = {1: 5, 5: 5, 10: 3, 30: 3}   # rows of history reserved per granularity
+LEVEL_ALPHA = 0.1
 
 EXPERT_CHAIN = ("y@t", "throughput_2@t", "buffer_size_3@t", "cores_3@t+h", "data_quality_3@t+h")
 
@@ -116,7 +120,7 @@ def make_cfg(**kw):
 # SAMPLES: one row per (t, t+h) pair, continuous values
 # ============================================================
 def is_core(col):
-    return col.split("_")[0] in ("throughput", "cores", "data", "buffer", "avg", "capacity") \
+    return col.split("_")[0] in ("throughput", "cores", "data", "buffer", "avg", "capacity", "level") \
         or col == D.LOAD_COL
 
 
@@ -180,7 +184,8 @@ def local_pool(S):
     """
     i = service_of(S.target)
     upstream = D.LOAD_COL if i == 1 else f"throughput_{i - 1}"
-    return [v for v in S.vars if is_core(v) and (service_of(v) == i or v == upstream)]
+    return [v for v in S.vars if is_core(v) and (service_of(v) == i or v == upstream)
+            and not (v.startswith("level_") and v != f"level_{S.target}")]
 
 
 def variable_pool(S, cfg):
@@ -197,9 +202,11 @@ def candidate_columns(S, cfg):
     for v in pool:
         name = "y" if v == S.target else v
         n_lags = cfg["ar_order"] if v == S.target else cfg["other_lags"]
+        if v.startswith("level_"):
+            n_lags = 1                      # a moving average already summarises the past
         cands += [f"{name}@t" + (f"-{lag}" if lag else "") for lag in range(n_lags)]
         # controls never move inside a run, so their velocity carries nothing
-        if cfg["velocity"] != "none" and v not in controls:
+        if cfg["velocity"] != "none" and v not in controls and not v.startswith("level_"):
             cands.append(f"d.{name}@t")
         if v in exog:
             cands.append(f"{v}@t+h")
@@ -242,14 +249,15 @@ class Binner:
         # The throughputs and the load are the same quantity measured at different
         # points of the chain: one set of bin edges for all of them. It is the
         # target's own edges when the target is one of them.
-        flow = {v for v in S.vars if v.startswith(("throughput_", "capacity_")) or v == D.LOAD_COL}
+        flow = {v for v in S.vars
+                if v.startswith(("throughput_", "capacity_", "level_")) or v == D.LOAD_COL}
         self.shared_edges = {S.target: self.y_edges}
         if cfg["shared_bins"]:
             if S.target in flow:
                 edges = self.y_edges
             else:
                 pooled = np.concatenate([S.cols[f"{v}@t"][train] for v in sorted(flow)
-                                         if not v.startswith("capacity_")])
+                                         if not v.startswith(("capacity_", "level_"))])
                 edges = _edges(pooled, nbx, "uniform")
             self.shared_edges.update({v: edges for v in flow if v != S.target})
         self.shared = set(self.shared_edges)
@@ -646,7 +654,7 @@ def select_parents(S, cfg, tr, code_tr, cands, forced):
     elif engine == "lasso":
         parents = lasso_rank(S, cands, forced, tr, mp)
     elif engine == "dynotears":
-        parents, info = dynotears_parents(S, cfg, tr, forced, mp)
+        parents, info = dynotears_parents(S, cfg, tr, forced, mp, lam=cfg["dynotears_lambda"])
     elif engine == "cv-forward":
         # inner split: the last 20% of the training runs decide which parents to add
         runs = np.unique(S.run[tr])
@@ -1082,7 +1090,34 @@ def study_capacity():
     return c
 
 
-STUDIES = {"capacity": study_capacity, "targets": study_targets, "constraints": study_constraints, "numeric": study_numeric,
+def study_recommended():
+    """The configuration recommended after all studies, for every target, with continuous read-outs."""
+    rec = dict(ar_order=2, other_lags=2, pool="local", capacity=True, on_change="capchain", numeric=True)
+    c = []
+    for v in ("throughput_1", "throughput_2", "throughput_3", "avg_p_latency_1", "avg_p_latency_2",
+              "avg_p_latency_3", "buffer_size_2", "buffer_size_3"):
+        disc = "quantile" if v.startswith("buffer") else "uniform"
+        for nb in (20, 50):
+            c.append(make_cfg(target=v, n_bins=nb, disc=disc, **rec))
+    for nb in (4, 10, 20):
+        c.append(make_cfg(granularity=30, n_bins=nb, **rec))
+    return c
+
+
+def study_extras():
+    """Slow level variable in the one-step model; DYNOTEARS penalty."""
+    c = []
+    for nb in (20, 50):
+        for h in (1, 5, 10):
+            base = dict(n_bins=nb, horizon=h, ar_order=2, other_lags=2)
+            c += [make_cfg(**base), make_cfg(**base, level=True),
+                  make_cfg(**base, level=True, forced=("y@t", "level_throughput_3@t"))]
+    for lam in (0.002, 0.005, 0.02, 0.05, 0.1):
+        c.append(make_cfg(engine="dynotears", dynotears_lambda=lam, ar_order=2, other_lags=2))
+    return c
+
+
+STUDIES = {"extras": study_extras, "recommended": study_recommended, "capacity": study_capacity, "targets": study_targets, "constraints": study_constraints, "numeric": study_numeric,
            "best": study_best, "config_change": study_config_change, "ofat": study_ofat, "bins_granularity": study_bins_granularity, "horizon": study_horizon,
            "interactions": study_interactions, "cv": study_cv, "refs": study_refs}
 
@@ -1093,10 +1128,15 @@ STUDIES = {"capacity": study_capacity, "targets": study_targets, "constraints": 
 _frame_cache = {}
 
 
-def load_frame(csv, target, granularity, capacity=False):
-    key = (str(csv), target, granularity) + (("capacity",) if capacity else ())
+def load_frame(csv, target, granularity, capacity=False, level=False):
+    key = (str(csv), target, granularity) + (("capacity",) if capacity else ()) + (("level",) if level else ())
     if key not in _frame_cache:
         df = D.aggregate(D.load_wide(csv, target, verbose=False), granularity)
+        if level:
+            for v in [c for c in D.feature_cols(df) if c.startswith("throughput_")]:
+                df[f"level_{v}"] = df.groupby("run_id")[v].transform(
+                    lambda x: x.ewm(alpha=LEVEL_ALPHA, adjust=False).mean())
+            df = df[D.META_COLS + [c for c in D.feature_cols(df) if c != target] + [target]]
         if capacity:
             first_chunk = D.make_temporal_folds(df[D.META_COLS], k=5)[0][0]["run_id"].unique()
             rate, line = D.fit_capacity_rate(df, first_chunk)
@@ -1110,9 +1150,10 @@ _sample_cache = {}
 
 
 def get_samples(csv, cfg):
-    key = (str(csv), cfg["target"], cfg["granularity"], cfg["horizon"], cfg["cross_run"], cfg["capacity"])
+    key = (str(csv), cfg["target"], cfg["granularity"], cfg["horizon"], cfg["cross_run"],
+           cfg["capacity"], cfg["level"])
     if key not in _sample_cache:
-        df = load_frame(csv, cfg["target"], cfg["granularity"], cfg["capacity"])
+        df = load_frame(csv, cfg["target"], cfg["granularity"], cfg["capacity"], cfg["level"])
         S = Samples(df, cfg["target"], cfg["horizon"], cfg["cross_run"],
                     MAX_HISTORY.get(cfg["granularity"], 3))
         S.meta = df[D.META_COLS]

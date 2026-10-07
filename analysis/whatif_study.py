@@ -173,7 +173,11 @@ def main():
             for v in TARGETS:
                 m = TabPFNRegressor.create_default_for_version(ModelVersion(args.tabpfn))
                 m.fit(ctx[CONFIG].to_numpy(), ctx[v].to_numpy())
-                preds[f"tabpfn {args.tabpfn}"][v] = (None, m.predict(test[CONFIG].to_numpy()))
+                # the median, as for boosting (absolute error): the throughput under a
+                # given configuration is skewed (a queue being drained), and the mean
+                # of TabPFN's predictive distribution is far off here
+                preds[f"tabpfn {args.tabpfn}"][v] = (None, m.predict(test[CONFIG].to_numpy(),
+                                                                     output_type="median"))
 
         for model, per_target in preds.items():
             for v, (P, point) in per_target.items():
