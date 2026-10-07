@@ -6,6 +6,7 @@ import gc
 import heapq
 import numpy as np
 import pandas as pd
+import subprocess
 from datetime import datetime
 from sklearn.preprocessing import KBinsDiscretizer, StandardScaler, RobustScaler
 from sklearn.tree import DecisionTreeClassifier
@@ -17,7 +18,7 @@ from sklearn.metrics import f1_score, log_loss, precision_score, recall_score
 from pgmpy.inference import VariableElimination
 from pgmpy.estimators import HillClimbSearch, BayesianEstimator
 from pgmpy.models import BayesianNetwork
-from full_dynamic_bn_lag_memory import build_dbn_model_2s, make_score
+from dbn_structure import build_dbn_model_2s, make_score
 
 
 # ============================================================
@@ -221,11 +222,30 @@ EXCLUDE_OTHER_THROUGHPUTS = False
 # ============================================================
 VARIANCE_THRESHOLD = 0.01
 
-_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-_stem = Path(CSV_PATH).stem.replace("dbn_wide_", "") + f"_run{_timestamp}"
+REPO_ROOT   = Path(__file__).resolve().parent.parent
+RESULTS_DIR = REPO_ROOT / "results"
 
-MODEL_SAVE_DIR   = f"saved_dbn_models_top5_{_stem}"
-RESULTS_CSV_PATH = f"dbn_k_sweep_results_{_stem}.csv"
+
+def _git_version():
+    """Short hash of the code that produced a run ('-dirty' if uncommitted changes)."""
+    try:
+        rev = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT,
+                             capture_output=True, text=True, check=True).stdout.strip()
+        dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"],
+                               cwd=REPO_ROOT, capture_output=True, text=True,
+                               check=True).stdout.strip()
+        return rev + ("-dirty" if dirty else "")
+    except Exception:
+        return "nogit"
+
+
+GIT_VERSION = _git_version()
+
+_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+_stem = Path(CSV_PATH).stem.replace("dbn_wide_", "") + f"_run{_timestamp}_g{GIT_VERSION}"
+
+MODEL_SAVE_DIR   = str(RESULTS_DIR / "models" / f"saved_dbn_models_top5_{_stem}")
+RESULTS_CSV_PATH = str(RESULTS_DIR / "sweeps" / f"dbn_k_sweep_results_{_stem}.csv")
 
 MODELING_GRANULARITY_SEC = 30
 MAX_ROWS = None
@@ -1493,6 +1513,8 @@ def main():
     global TARGET
 
     os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
+    os.makedirs(os.path.dirname(RESULTS_CSV_PATH), exist_ok=True)
+    print(f"[RUN] code version (git): {GIT_VERSION}")
     all_results = []
 
     for tgt in TARGETS:

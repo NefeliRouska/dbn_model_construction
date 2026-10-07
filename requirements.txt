@@ -1,10 +1,13 @@
-# Collected from the imports of the DBN scripts; versions not pinned yet.
-numpy
-pandas
-scipy
-scikit-learn
-pgmpy
-networkx
-matplotlib
-torch            # lstm_baseline.py only
-mrmr_selection   # legacy mRMR feature selection (imported as `mrmr`)
+# Versions installed and smoke-tested on Python 3.12 (macOS, 2026-10-07).
+# pgmpy must stay below 1.0: the code uses BayesianNetwork and BicScore,
+# which were renamed in pgmpy 1.x.
+pgmpy==0.1.26
+numpy==2.5.3
+pandas==3.0.6
+scipy==1.18.1
+scikit-learn==1.9.1
+networkx==3.7
+matplotlib==3.11.2
+torch==2.14.1            # analysis/lstm_baseline.py only
+mrmr-selection==0.2.8    # only used by archived scripts (imported as `mrmr`)
+requests==2.34.2         # data_collection/experiment_orchestrator.py only

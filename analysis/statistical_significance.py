@@ -14,8 +14,8 @@ This tests whether the DBN systematically outperforms each baseline
 across the entire hyperparameter space.
 
 Usage:
-    python statistical_significance.py \
-        --csv dbn_k_sweep_results_<timestamp>.csv \
+    python analysis/statistical_significance.py \
+        --csv results/sweeps/dbn_k_sweep_results_<timestamp>.csv \
         [--bins 3]          # optional: restrict to a specific bin count
         [--out results/]    # optional: save results to directory
 """

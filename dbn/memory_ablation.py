@@ -1,5 +1,5 @@
 """
-memory_runner.py
+memory_ablation.py
 
 Runs YOUR pipeline unchanged (run_one -> feature selection, discretizer,
 build_dbn_model_2s, evaluate, persistence / AR-DBN / Static BN SI) for ONE
@@ -10,8 +10,8 @@ Fixed: markov feature selection, one score, one discretizer, one K.
 Varied: N_LAGS, USE_CONTROL_FLAG, USE_VELOCITY_FEATURES.
 
 Usage:
-  python memory_runner.py --csv share/metrics/dbn_wide_XXXX.csv
-  python memory_runner.py --csv ... --n_bins 6 8 --horizon 3
+  python dbn/memory_ablation.py --csv data/dbn_wide_XXXX.csv
+  python dbn/memory_ablation.py --csv ... --n_bins 6 8 --horizon 3
 """
 import argparse
 import contextlib
@@ -128,7 +128,10 @@ def run_bins(P, raw, folds, args, nb):
     print(f"\n=== RESULTS bins={nb} horizon={args.horizon} "
           f"(d_vs_* < 0 means lower log-loss than the reference) ===")
     print(out_df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
-    fname = f"memory_runner_h{args.horizon}_b{nb}_{args.disc}_{args.score}.csv"
+    out_dir = P.RESULTS_DIR / "memory_ablation"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fname = out_dir / (f"memory_ablation_h{args.horizon}_b{nb}_{args.disc}_{args.score}"
+                       f"_g{P.GIT_VERSION}.csv")
     out_df.to_csv(fname, index=False)
     print(f"\nSaved {fname}")
 
@@ -136,7 +139,7 @@ def run_bins(P, raw, folds, args, nb):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", required=True)
-    ap.add_argument("--pipeline_module", default="test_DBN_new_era_AR_fixed")
+    ap.add_argument("--pipeline_module", default="dbn_sweep")
     ap.add_argument("--n_bins", type=int, nargs="+", default=[6])
     ap.add_argument("--disc", default="classic_uniform")
     ap.add_argument("--score", default="bic")

@@ -13,10 +13,10 @@ Note: precision/recall columns added in new sweep run.
       Script gracefully handles their absence for backward compatibility.
 
 Usage:
-    python dbn_visualize_v2.py \
-        --csv dbn_k_sweep_results_<stamp>.csv \
-        --edges_dir saved_dbn_models_top5_<stamp> \
-        --out figures/
+    python analysis/visualize_sweep.py \
+        --csv results/sweeps/dbn_k_sweep_results_<stamp>.csv \
+        --edges_dir results/models/saved_dbn_models_top5_<stamp> \
+        --out results/figures/
 
     Optional:
         --min_edge_frac 0.8
