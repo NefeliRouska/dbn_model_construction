@@ -250,6 +250,11 @@ Accuracy of the DBN; rows = trained on, columns = tested on.
 - In all twelve cells the DBN is 3.5 to 5.2 points above the AR table trained
   on the same data.
 
+With the recommended configuration of §11 the same pattern holds one notch
+higher: pooled training gives 0.927 / 0.934 / 0.922 (constant / periodic /
+unpredictable) against 0.874 / 0.888 / 0.866 for AR, the highest figures
+obtained for `throughput_3` at 1 s and 20 bins.
+
 ## 6. TabPFN v3.5
 
 Not run. The Hugging Face side is complete (the v3.5 weights download with
@@ -328,8 +333,26 @@ somewhere in their six minutes:
 | none | all nodes | 3% | 31% | 166 |
 | s23 | all nodes | 5% | 16% | 150 |
 
+**Per-service detectors localise the change.** Summing only the nodes of one
+service (its throughput, latency and queue):
+
+| Unseen regime | Detector | Run-level AUC (surprise) | Runs detected by CUSUM | Median seconds to alarm |
+|---|---|---|---|---|
+| s1 | **service 1** | **0.997** | **98%** | **13** |
+| s1 | service 2 | 0.890 | 23% | 157 |
+| s1 | service 3 | 0.801 | 20% | 149 |
+| s23 | service 3 | 0.726 | 15% | 167 |
+| s23 | `throughput_3` alone | 0.801 | 22% | 188 |
+
+When service 1 enters a saturation regime the model has never seen, the
+detector built from service 1's own nodes fires in 98% of the runs, within
+about 13 seconds, while the detectors of the other services mostly stay
+quiet: the alarm also says *where*. For an unannounced reconfiguration (one
+step) the per-service detectors catch 86–90% at 1% false alarms, all nodes
+together 93%.
+
 A regime in which the first service saturates is noticed in three quarters of
-the runs, typically within 80 seconds. The other two are mostly missed by this
+the runs, typically within 80 seconds, by the all-node detector. The other two are mostly missed by this
 detector within one run; they are the cases where the system behaves "like
 before, only calmer" or where the difference is confined to one service.
 

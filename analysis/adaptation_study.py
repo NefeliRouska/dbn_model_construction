@@ -59,7 +59,10 @@ from regime_study import bottleneck_of_runs, predict, score  # noqa: E402
 RESULTS_DIR = A.REPO_ROOT / "results" / "adaptation"
 NODES = ["throughput_3", "throughput_2", "throughput_1", "avg_p_latency_1", "avg_p_latency_2",
          "avg_p_latency_3", "buffer_size_2", "buffer_size_3"]
-SETS = {"target only": NODES[:1], "throughputs": NODES[:3], "all nodes": NODES}
+SETS = {"target only": NODES[:1], "throughputs": NODES[:3], "all nodes": NODES,
+        "service 1": ["throughput_1", "avg_p_latency_1"],
+        "service 2": ["throughput_2", "avg_p_latency_2", "buffer_size_2"],
+        "service 3": ["throughput_3", "avg_p_latency_3", "buffer_size_3"]}
 BUCKETS = [(0, 0, "0"), (1, 5, "1-5"), (6, 10, "6-10"), (11, 20, "11-20"), (21, 40, "21-40"),
            (41, 10 ** 6, ">40")]
 

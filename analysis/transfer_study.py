@@ -45,12 +45,12 @@ def main():
     overrides = {}
     for kv in args.set:
         k, v = kv.split("=", 1)
-        overrides[k] = type(A.DEFAULTS[k])(v)
+        overrides[k] = (v == "True") if isinstance(A.DEFAULTS[k], bool) else type(A.DEFAULTS[k])(v)
     cfg = A.make_cfg(**overrides)
 
     frames = []
     for k, csv in enumerate(args.csv):
-        df = A.load_frame(csv, cfg["target"], cfg["granularity"]).copy()
+        df = A.load_frame(csv, cfg["target"], cfg["granularity"], cfg["capacity"], cfg["level"]).copy()
         df["run_id"] = df["run_id"] + k * OFFSET
         frames.append(df)
     cols = [c for c in frames[0].columns if all(c in f.columns for f in frames)]
