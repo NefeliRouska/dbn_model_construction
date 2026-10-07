@@ -214,7 +214,7 @@ Outputs are in `results/ablation/` and `results/tabpfn/` unless stated.
 | 30 | `tabpfn_baseline.py` rerun (TabPFN v2) with the recommended DBN on the same test samples | all | part 2 §11 | DBN ahead in accuracy in all four settings (+0.012 to +0.041), level or ahead in MAE |
 | 31 | Per-service detectors; recommended configuration with pooled training | all | part 2 §9, §5 | service-1 detector finds an unseen service-1 regime in 98% of runs within ~13 s; pooled training 0.928 against AR 0.876 |
 | 32 | Corrected `dbn_sweep.py` at 30 s, bins 4 / 10 / 20: 383 of 1 080 configurations (stopped; full grid for the other machine) | all | part 2 §13, `results/sweeps/dbn_k_sweep_partial_30s_from_logs_20261007.csv` | no failed fold; level with AR at 30 s (+0.001 to +0.004) |
-| — | TabPFN v3.5 | — | part 2 §6 | **not run**: Prior Labs licence key missing on this machine |
+| 33 | TabPFN v3.5 vs recommended DBN, five settings; and on unseen configurations | all | part 2 §6, `results/tabpfn/`, `results/whatif/` | 1 s: DBN ahead in accuracy, level in MAE; 30 s: TabPFN v3.5 clearly better; unseen configurations: DBN with capacity nodes ahead |
 
 Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
 1 s), `joint_dbn.py`, `visualize_sweep.py`, the figures in `results/figures/`.
@@ -236,13 +236,19 @@ Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
 4. Collect one dump with a different seed (the three dumps share one
    configuration schedule) and record the 30 s stabilisation period, which is
    currently lost.
-5. TabPFN v3.5 once access to the gated weights is set up.
+5. Decide how to present the 30 s setting, where TabPFN v3.5 is clearly better
+   than the DBN (part 2 §6); at 1 s the DBN is ahead.
 
 ---
 
 ## 9. Log
 
 Newest first.
+
+### 2026-10-08
+
+- TabPFN v3.5 runs (test 33) after the Prior Labs licence was accepted on this
+  machine; part 2 §6 rewritten with the results.
 
 ### 2026-10-07 (fourth pass, night)
 

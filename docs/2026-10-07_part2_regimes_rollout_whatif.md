@@ -26,8 +26,10 @@ target is `throughput_3`, 1 s, 20 bins, two lags, unless stated.
    4 bins) (§4).
 5. **Models transfer across workloads** as long as the training workload varied
    the load. Pooling the three workloads is best everywhere (§5).
-6. **TabPFN v3.5: not run.** The Prior Labs licence key was not on this machine
-   during the session (§6).
+6. **TabPFN v3.5** (run on 8 October, §6): at 1 s the recommended DBN is ahead
+   in bin accuracy (0.922 against 0.906 at 20 bins) and level as a numeric
+   forecast; at 30 s TabPFN v3.5 is clearly better (MAE 6.5 against 10.4); on
+   unseen configurations the DBN with capacity nodes is ahead (0.73 against 0.58).
 7. **Detection works much better with the whole network than with one
    variable.** Summing the surprise of all eight nodes, an unannounced
    reconfiguration is caught 93% of the time at 1% false alarms (73% with
@@ -257,19 +259,43 @@ obtained for `throughput_3` at 1 s and 20 bins.
 
 ## 6. TabPFN v3.5
 
-Not run. The Hugging Face side is complete (the v3.5 weights download with
-the stored token). The library additionally requires a licence acceptance on
-Prior Labs' own site (https://ux.priorlabs.ai), which stores an API key in
-`~/.cache/tabpfn/auth_token`; that key was not present during the session.
-A missing certificate bundle in this Python also made the library report the
-problem as a Hugging Face error; prefix commands with
-`SSL_CERT_FILE=$(python -m certifi)`. Once the key exists:
+Run on 8 October after the Prior Labs licence was accepted (the library needs
+its own licence step at https://ux.priorlabs.ai in addition to the Hugging Face
+login; on this Python, prefix commands with `SSL_CERT_FILE=$(python -m certifi)`).
+Same protocol as before: same folds and test samples for every model, 10 000
+random training samples as TabPFN's context at 1 s, everything at 30 s.
+"DBN" is the recommended configuration of §11; its MAE is the
+conditional-median read-out. Differences are DBN minus TabPFN, 95% interval
+over runs.
 
-    SSL_CERT_FILE=$(.venv/bin/python -m certifi) .venv/bin/python analysis/tabpfn_baseline.py \
-        --csv data/dbn_wide_<stem>.csv --model-version v3.5 --device mps
-    SSL_CERT_FILE=$(.venv/bin/python -m certifi) .venv/bin/python analysis/whatif_study.py \
-        --csv data/dbn_wide_<stem>.csv --tabpfn v3.5
-    .venv/bin/python analysis/tabpfn_report.py --version v3.5
+| Setting | Accuracy: DBN / TabPFN v3.5 | Difference | Log-loss: DBN / TabPFN | MAE: DBN / TabPFN | Difference |
+|---|---|---|---|---|---|
+| 1 s, 10 bins | **0.948** / 0.942 | +0.006 [0.002, 0.010] | 0.194 / **0.169** | 4.17 / **3.52** | +0.65 [0.27, 1.01] |
+| 1 s, 20 bins | **0.922** / 0.906 | +0.017 [0.012, 0.021] | 0.270 / 0.272 | 3.72 / 3.52 | +0.20 [−0.14, +0.49] |
+| 1 s, 50 bins | **0.878** / 0.860 | +0.019 [0.013, 0.025] | 0.413 / 0.431 | 3.75 / 3.52 | +0.24 [−0.17, +0.64] |
+| 30 s, 20 bins | 0.889 / 0.890 | −0.001 [−0.007, +0.005] | 0.614 / **0.389** | 10.4 / **6.5** | +3.9 [3.1, 4.7] |
+| 30 s, 4 bins | 0.959 / **0.968** | −0.009 [−0.013, −0.005] | 0.167 / **0.100** | 11.2 / **6.5** | +4.7 [4.0, 5.4] |
+
+Configurations never seen in training (§3 protocol, `throughput_3`): TabPFN
+v3.5 accuracy 0.58, MAE 33 requests/s — against 0.73 / 34 for the DBN with
+capacity nodes and 0.69 / 24 for the min rule. (v2 was 0.41 / 46.)
+
+Reading:
+
+- **At 1 s the DBN is ahead of TabPFN v3.5 in bin accuracy** in all three bin
+  counts, level in log-loss at 20 and 50 bins, and statistically level as a
+  numeric forecast at 20 and 50 bins (TabPFN is nominally 0.2 requests/s
+  better).
+- **At 30 s TabPFN v3.5 is clearly the better model**: level or ahead in
+  accuracy, much better calibrated, and its numeric error is 6.5 against 10.4
+  requests/s. v3.5 is a large step up from v2 here (v2: 11.3). At 30 s most of
+  what there is to predict is the effect of a new configuration, where a
+  flexible regressor on continuous inputs has the advantage over tables.
+- **For configurations it has not seen, TabPFN v3.5 is at the level of gradient
+  boosting** and behind the DBN with capacity nodes in accuracy: the physical
+  structure still matters there.
+- TabPFN is restricted to a 10 000-sample context at 1 s (of up to 167 000);
+  the DBN uses all of it.
 
 ## 7. What to run on the other machine
 
@@ -426,7 +452,7 @@ DBN minus TabPFN with 95% intervals over runs.
 v2 in bin accuracy in all four settings and level with it, or slightly ahead,
 as a numeric forecast. This replaces the comparison in §7 of the first report,
 where the DBN was the earlier reference configuration. TabPFN v3.5 remains to
-be run.
+be run — done since, see §6.
 
 ## 12. Smaller tests
 
