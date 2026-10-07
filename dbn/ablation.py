@@ -1186,22 +1186,36 @@ def run_config(csv, cfg, extra_models=()):
 
 
 def compare_to_reference(per_run, config, model="model", ref_config=None, ref_model="ar",
-                         n_boot=2000, seed=0):
+                         n_boot=2000, seed=0, cluster=None):
     """
     Paired comparison on the runs both were tested on. The unit of resampling is
     the run (rows inside a run are strongly dependent; runs are separated by a
     reconfiguration). Returns the difference (candidate - reference) of
     accuracy, log-loss and MAE with a 95% bootstrap interval and the two-sided
     bootstrap p-value; negative is better for log-loss and MAE.
+
+    cluster: function run_id -> cluster id. Runs with the same cluster id are
+    resampled together. The three datasets of this project were collected with
+    one seed and share one sequence of configurations, so run k of each dataset
+    is the same experimental condition under a different load: pooled reports
+    pass the position in that sequence as the cluster, which makes the
+    configuration (467 of them in the test folds), not the run (1 401), the
+    unit that is resampled.
     """
     ref_config = config if ref_config is None else ref_config
     a = per_run[(per_run.config == config) & (per_run.model == model)].set_index("run_id")
     b = per_run[(per_run.config == ref_config) & (per_run.model == ref_model)].set_index("run_id")
     common = a.index.intersection(b.index)
     a, b = a.loc[common], b.loc[common]
+    n_runs = len(common)
+    if cluster is not None:
+        key = [cluster(r) for r in common]
+        a = a.groupby(key).sum(numeric_only=True)
+        b = b.groupby(key).sum(numeric_only=True)
+        common = a.index
     rng = np.random.default_rng(seed)
     draws = rng.integers(0, len(common), size=(n_boot, len(common)))
-    out = {"n_runs": len(common)}
+    out = {"n_runs": n_runs, "n_resampled_units": len(common)}
     for metric, name in (("correct", "acc"), ("ll", "logloss"), ("ae", "mae"), ("aeh", "maeh")):
         da, db, na, nb = a[metric].to_numpy(), b[metric].to_numpy(), a["n"].to_numpy(), b["n"].to_numpy()
         point = da.sum() / na.sum() - db.sum() / nb.sum()

@@ -95,10 +95,13 @@ def upstream(v):
 
 def allowed(v, structure, exog):
     """(state variables, exogenous variables) that may be parents of v."""
+    if structure != "capacity":            # the capacity node belongs to that structure only
+        exog = [e for e in exog if not e.startswith("capacity_")]
     if structure == "learned":
         return STATE, exog
     i = service(v)
     structure = structure.rstrip("?")
+    structure = "local+capacity" if structure == "capacity" else structure
     own = [s for s in STATE if service(s) == i]
     up = upstream(v) if v.startswith("throughput_") else f"throughput_{i - 1}"
     state = own + ([up] if up in STATE else [])
@@ -151,7 +154,8 @@ def select_structure(csv, v, structure, tr_runs, te_runs, n_bins, horizon, exog)
                      other_lags=2, disc="quantile" if v.startswith("buffer") else "uniform")
     S = A.get_samples(csv, cfg)
     tr, _ = A.split_masks(S, tr_runs, te_runs)
-    state, ex = allowed(v, "local" if structure in ("chain", "anchored", "capacity") else structure, exog)
+    base = {"chain": "local", "anchored": "local"}.get(structure, structure)
+    state, ex = allowed(v, base, exog)
     cands = []
     for u in state:
         name = "y" if u == v else u

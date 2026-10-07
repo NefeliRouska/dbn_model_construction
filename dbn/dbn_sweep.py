@@ -1819,6 +1819,11 @@ def main():
                                 )
 
                             rows.append(row)
+                            # written after every configuration: an interrupted
+                            # sweep keeps what it has finished
+                            pd.concat(all_results + [pd.DataFrame(rows)], ignore_index=True).to_csv(
+                                RESULTS_CSV_PATH, index=False
+                            )
 
                             print(
                                 f"[OK] target={TARGET} K={k:2d} "

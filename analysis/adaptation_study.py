@@ -27,7 +27,8 @@ of a step) is the sum of the surprises of a set of nodes:
     number of seconds until they do.
 (b) step-level: models that are not told the configuration; AUC of the score
     on the first step after a reconfiguration against ordinary steps, and the
-    share of reconfigurations caught at 1% false alarms.
+    share of reconfigurations caught at 1% false alarms (threshold set on a
+    held-out half of the test runs).
 
 Part 2, adaptation. The model for throughput_3 is trained on the first half of
 the runs WITHOUT regime r, then the second half arrives run by run:
@@ -54,7 +55,7 @@ from sklearn.metrics import roc_auc_score
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dbn"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ablation as A  # noqa: E402
-from regime_study import bottleneck_of_runs, predict, score  # noqa: E402
+from regime_study import bottleneck_of_runs, held_out_alarm, predict, score  # noqa: E402
 
 RESULTS_DIR = A.REPO_ROOT / "results" / "adaptation"
 NODES = ["throughput_3", "throughput_2", "throughput_1", "avg_p_latency_1", "avg_p_latency_2",
@@ -145,7 +146,7 @@ def detection(csv, base):
                 tr, te = A.split_masks(S, train_runs, test_runs)
                 if mode == "step":
                     step_scores.setdefault(fi, {})[v] = surprise(S, cfg, tr, te)[0]
-                    keys[("step", fi)] = S.cross[te]
+                    keys[("step", fi)] = (S.cross[te], S.run[te])
                     continue
                 for r in sorted(set(label)):
                     tr_not = tr & (label != r)
@@ -170,12 +171,13 @@ def detection(csv, base):
                                  "auc_surprise": roc_auc_score(s["novel"] > 0.5, s["s"]),
                                  "auc_miscalibration": roc_auc_score(s["novel"] > 0.5, s["excess"].abs())})
     for fi, per_node in step_scores.items():
-        change = keys[("step", fi)]
+        change, run = keys[("step", fi)]
         for name, nodes in SETS.items():
             s = sum(per_node[v] for v in nodes)
-            thr = np.quantile(s[~change], 0.99)
+            caught, false_alarms = held_out_alarm(s, change, run)
             step_rows.append({"fold": fi + 1, "score": name, "auc": roc_auc_score(change, s),
-                              "caught_at_1pct_false_alarms": float((s[change] > thr).mean())})
+                              "caught_at_1pct_false_alarms": caught,
+                              "realised_false_alarms": false_alarms})
     return pd.DataFrame(run_rows), pd.DataFrame(step_rows), pd.DataFrame(cusum)
 
 
@@ -256,7 +258,8 @@ def main():
         print(run_rows.groupby(["unseen_regime", "nodes"])[["auc_surprise", "auc_miscalibration"]]
               .mean().unstack("nodes").round(3).to_string())
         print(f"\n=== {stem} | step-level detection of unannounced reconfigurations ===")
-        print(step_rows.groupby("score")[["auc", "caught_at_1pct_false_alarms"]].mean().round(3).to_string())
+        print(step_rows.groupby("score")[["auc", "caught_at_1pct_false_alarms", "realised_false_alarms"]]
+              .mean().round(3).to_string())
 
 
 if __name__ == "__main__":

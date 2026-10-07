@@ -12,7 +12,10 @@ in results/ablation/ and writes one row per configuration:
     d_*_vs_ref                difference to the reference configuration
                               (only meaningful when the bins are the same)
     *_lo / *_hi / p_*         95% interval and two-sided p-value of that
-                              difference from a paired bootstrap over RUNS
+                              difference from a paired bootstrap. The unit that
+                              is resampled is the position in the configuration
+                              schedule (the three datasets share one schedule,
+                              so run k of each dataset is drawn together)
     p_holm_*                  the p-values corrected for the number of
                               configurations compared (Holm)
 
@@ -33,6 +36,11 @@ import ablation as A  # noqa: E402
 
 
 N_BOOT = 10000
+
+
+def schedule_point(run_id):
+    """'<dataset>:<run>' -> run: the position in the configuration schedule the datasets share."""
+    return str(run_id).split(":", 1)[-1]
 
 
 def newest(study, suffix, directory):
@@ -98,11 +106,12 @@ def report(study, directory, ref_config="ref", model="model"):
         for ds, g in f.groupby("dataset"):
             row[f"acc[{ds[:8]}]"] = g.acc_all.mean()
             row[f"logloss[{ds[:8]}]"] = g.logloss_all.mean()
-        cmp_ar = A.compare_to_reference(r, cfg, model, cfg, "ar", n_boot=N_BOOT)
+        cmp_ar = A.compare_to_reference(r, cfg, model, cfg, "ar", n_boot=N_BOOT, cluster=schedule_point)
         row.update({f"{k}_vs_ar": v for k, v in cmp_ar.items() if k != "n_runs"})
         row["n_runs"] = cmp_ar["n_runs"]
         if ref_config != "self" and cfg != ref_config and ref_config in configs:
-            cmp_ref = A.compare_to_reference(runs, cfg, model, ref_config, model, n_boot=N_BOOT)
+            cmp_ref = A.compare_to_reference(runs, cfg, model, ref_config, model, n_boot=N_BOOT,
+                                             cluster=schedule_point)
             row.update({f"{k}_vs_ref": v for k, v in cmp_ref.items() if k != "n_runs"})
         rows.append(row)
     out = pd.DataFrame(rows)

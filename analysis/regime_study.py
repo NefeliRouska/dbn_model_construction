@@ -163,14 +163,29 @@ def run(csv, cfg, kind):
     return pd.DataFrame(rows), pd.DataFrame(parent_rows), pd.DataFrame(detect_rows)
 
 
+def held_out_alarm(score, change, run, level=0.99, seed=0):
+    """
+    Alarm threshold = `level` quantile of the score on the ordinary steps of a
+    random half of the test runs; detection and false-alarm rates are measured
+    on the other half. Returns (share of changes caught, realised false-alarm rate).
+    """
+    runs = np.unique(run)
+    calib = np.isin(run, np.random.default_rng(seed).choice(runs, len(runs) // 2, replace=False))
+    thr = np.quantile(score[~change & calib], level)
+    report = ~calib
+    caught = float((score[change & report] > thr).mean()) if (change & report).any() else np.nan
+    return caught, float((score[~change & report] > thr).mean())
+
+
 def change_detection(csv, cfg):
     """
     A reconfiguration as a fault to detect: the model is NOT told the new
     configuration (exog='none') and its surprise, -log p(observed bin), is used
     as an alarm score on every step. AUC of that score for telling the first
     step after a reconfiguration from an ordinary step, and the share of
-    reconfigurations caught at a threshold that raises a false alarm on 1% of
-    ordinary steps. The same for the AR table's surprise.
+    reconfigurations caught at a threshold set for 1% false alarms on a
+    held-out half of the test runs (held_out_alarm). The same for the AR
+    table's surprise.
     """
     cfg = {**cfg, "exog": "none", "cross_run": True}
     S = A.get_samples(csv, cfg)
@@ -187,10 +202,10 @@ def change_detection(csv, cfg):
         s_ar = score(ar.predict([c_te("y@t")[0]], c_te.n), c_te.y)[1]
         change = S.cross[te]
         for name, sc in (("dbn", s_dbn), ("ar", s_ar)):
-            thr = np.quantile(sc[~change], 0.99)
+            caught, false_alarms = held_out_alarm(sc, change, S.run[te])
             rows.append({"fold": fi + 1, "detector": name, "n_changes": int(change.sum()),
                          "n_ordinary": int((~change).sum()), "auc": roc_auc_score(change, sc),
-                         "caught_at_1pct_false_alarms": float((sc[change] > thr).mean())})
+                         "caught_at_1pct_false_alarms": caught, "realised_false_alarms": false_alarms})
     return pd.DataFrame(rows)
 
 
@@ -217,7 +232,8 @@ def main():
         det.insert(0, "granularity", gran)
         det.to_csv(RESULTS_DIR / f"{tag}_reconfiguration_detection_{gran}s.csv", index=False)
         print(f"\n=== {stem} | detecting reconfigurations from surprise, {gran} s ===")
-        print(det.groupby("detector")[["auc", "caught_at_1pct_false_alarms"]].mean().round(3).to_string())
+        print(det.groupby("detector")[["auc", "caught_at_1pct_false_alarms", "realised_false_alarms"]]
+              .mean().round(3).to_string())
     if args.only_detection:
         return
 

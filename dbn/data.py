@@ -26,9 +26,11 @@ META_COLS = ["run_id", "pos", "timestamp"]
 # (same constant as data_prep/convert_prom_dump.py).
 RUN_GAP_SEC = 5.0
 
-# Arrival rate applied to the first service. buffer_size_1 reports it exactly
-# (it takes the values the orchestrator sends to /change_rps, at the moment
-# they take effect), so it is the reference for the load.
+# Arrival rate offered to the first service. buffer_size_1 takes exactly the
+# values the orchestrator sends to /change_rps, at the moment service 1 has
+# them: it is the rate setpoint as seen by service 1 (for the other services
+# the same metric is their queue backlog), not an independent measurement of
+# the traffic. It is the best record of the load in the dumps.
 LOAD_SOURCE_COL = "buffer_size_1"
 LOAD_COL = "rps"
 

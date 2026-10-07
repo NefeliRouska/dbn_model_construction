@@ -1,6 +1,12 @@
 # DBN model building — fixes, ablation and TabPFN comparison
 
-7 October 2026. Work done on branch `audit-fixes` (nothing committed, nothing pushed).
+7 October 2026. Work done on branch `audit-fixes` (committed there, not pushed).
+
+> **Corrected on 8 October after an external audit** — see
+> [2026-10-08_audit_response.md](2026-10-08_audit_response.md). Intervals printed
+> in this document resample runs; the three datasets share one configuration
+> schedule, so the intervals to quote are the schedule-level ones in the audit
+> response (wider, same conclusions). TabPFN v3.5 has since been run: part 2 §6.
 
 ## 1. Headline
 
@@ -81,7 +87,12 @@ The fixed pgmpy sweep was run end to end on a small grid:
 | 30 s, 10 | uniform | AIC | 0.876 | 0.875 | 0.575 | 0.591 | 50 s |
 | 30 s, 10 | uniform | BIC | 0.875 | 0.875 | 0.599 | 0.591 | 21 s |
 
-(periodic dataset, K = 4, Markov-blanket feature selection.) The default grid
+(periodic dataset, K = 4, Markov-blanket feature selection; AR 0.887 is this
+dataset's value, the pooled figure used elsewhere is 0.875. Outputs:
+`results/sweeps/dbn_sweep_smallgrid_periodic_*_20261007.csv`, log in
+`results/logs/dbn_sweep_smallgrid_periodic_1s_20bins_20261007.log`; they were
+produced from the working tree of the first commit, before the chain-direction
+rule was added.) The default grid
 has 360 configurations; at 1 s that is roughly 20 hours per dataset.
 
 ---
@@ -308,7 +319,11 @@ at configuration changes, forward selection, backoff prior):
 
 Mean absolute error in requests/s at 1 s. The DBN's forecast is turned into a
 number as "current value + expected change of bin value", so that predicting
-"same bin" returns the current value.
+"same bin" returns the current value (column `aeh` / `maeh` in the result
+files). Read instead as the plain expected bin value (`ae` / `mae`), the same
+table gives 8.4 requests/s against 8.9 for a persistence forecast expressed in
+bins: that number is dominated by the width of a bin. Gradient boosting and
+TabPFN are scored on their own continuous forecast.
 
 | Model | MAE, 20 bins | MAE, 50 bins |
 |---|---|---|
@@ -625,9 +640,10 @@ TabPFN run without this correction was discarded.
 
 ## 8. Open points and caveats
 
-- **Nothing is committed.** All changes are uncommitted on branch
-  `audit-fixes`; result files therefore carry `-dirty` in their names. Review,
-  then commit, and rerun what you want to keep under a clean hash.
+- **Result files carry `-dirty` hashes.** Everything is committed on
+  `audit-fixes`, but most result files were produced before the commit that
+  contains the code that wrote them. Rerun under a clean hash
+  (`scripts/run_long_jobs.sh studies`) for anything that goes in the paper.
 - **Old results are not comparable.** Everything in `results/sweeps`,
   `results/models`, `results/figures` and `results/logs` was produced on
   mis-ordered tables. I did not delete or move any of it.

@@ -32,7 +32,7 @@ holds the modelling code, its results, and its git history.
 | `analysis/adaptation_study.py` | Detection of regime changes and reconfigurations from the surprise of all nodes; recovery when the tables are updated online. |
 | `analysis/` (rest) | Markov-order analysis, Markov test, control-variable check, statistical significance of a sweep, LSTM baseline, sweep visualisation. |
 | `results/` | Outputs: `sweeps/` (result tables), `models/` (saved top models), `logs/`, `figures/`, `memory_ablation/`, `ablation/`, `tabpfn/`. |
-| `docs/` | `HANDOVER.md`: what changed and every test run (kept up to date). Dated reports with the full result tables. |
+| `docs/` | `HANDOVER.md`: what changed and every test run (kept up to date). Dated reports with the full result tables; `2026-10-08_audit_response.md` answers the external audit in `AUDIT.md` and holds the corrected tables. |
 | `archive/` | Superseded script versions, early static-BN work, old runs. See `archive/README.md`. |
 | `data/` | Not tracked (≈13 GB). Raw dumps and the wide tables derived from them. |
 

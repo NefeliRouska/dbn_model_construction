@@ -1,10 +1,21 @@
 """
 tabpfn_baseline.py -- how far is the DBN from TabPFN on the same task?
 
-Every model predicts throughput_3 at t+h from the same information (the
-candidate columns of dbn/ablation.py: service metrics at t, and the controls
-and load at t+h), on the same folds and the SAME test samples, and is scored on
-the same bins:
+Every model predicts throughput_3 at t+h on the same folds and the SAME test
+samples, and is scored on the same bins. Models are grouped by the information
+they are given; compare inside a group:
+
+  reference inputs    one value of every service metric at t, controls and load
+                      at t+h (the candidate columns of the reference DBN)
+                          model, tabpfn, tabpfn_parents, tabpfn_clf, hgb, hgb_ctx
+  recommended inputs  the candidate columns of the recommended DBN: the target's
+                      own service and its input flow at t and t-1, its controls,
+                      the load, and the learned capacity at t+h
+                          dbn_rec, dbn_rec_median, tabpfn_rec
+  rich inputs         every service metric at t and t-1, all controls, the load
+                      and the three capacities (the most TabPFN can be given)
+                          dbn_rich, dbn_rich_median, tabpfn_rich
+  (ar and persistence only use the target's current value)
 
     persistence        y(t+h) = y(t)
     ar                 P(bin' | bin)                      -- table on the target's bins
@@ -52,6 +63,7 @@ RESULTS_DIR = A.REPO_ROOT / "results" / "tabpfn"
 
 RECOMMENDED = dict(ar_order=2, other_lags=2, pool="local", capacity=True, on_change="capchain",
                    numeric=True)
+RICH = dict(ar_order=2, other_lags=2, pool="core", capacity=True, on_change="capchain", numeric=True)
 
 # (granularity, horizon, n_bins) settings to compare on
 SETTINGS = [(1, 1, 20), (1, 1, 50), (1, 1, 10), (1, 5, 20), (30, 1, 20), (30, 1, 4)]
@@ -80,7 +92,17 @@ class TabPFNModels:
             m.fit(X[ctx], (S.y1 - S.y0)[ctx])
             if len(self.cache) >= 12:                                # bound the memory used
                 self.cache.pop(next(iter(self.cache)))
-            self.cache[key] = m.predict(X[te], output_type="full")
+            # predicted in chunks and kept on the CPU: with ~40 input columns a
+            # single call for 2 000 test rows exhausts the GPU memory of this Mac
+            Xte, logits, median, crit = X[te], [], [], None
+            for a in range(0, len(Xte), 500):
+                out = m.predict(Xte[a:a + 500], output_type="full")
+                logits.append(out["logits"].detach().cpu())
+                median.append(np.asarray(out["median"]))
+                crit = out["criterion"]
+            import torch
+            self.cache[key] = {"logits": torch.cat(logits), "median": np.concatenate(median),
+                               "criterion": crit}
         return self.cache[key]
 
     def _to_bins(self, out, S, te, binner):
@@ -95,8 +117,10 @@ class TabPFNModels:
         edges = binner.y_edges
         if A.integer_target(S):
             edges = np.ceil(edges) - 0.5
-        ys = torch.tensor(edges[None, :] - y0[:, None], dtype=logits.dtype, device=logits.device)
-        cdf = crit.cdf(logits, ys).cpu().numpy()
+        device = crit.borders.device
+        ys = torch.tensor(edges[None, :] - y0[:, None], dtype=logits.dtype)
+        cdf = np.concatenate([crit.cdf(logits[a:a + 500].to(device), ys[a:a + 500].to(device)).cpu().numpy()
+                              for a in range(0, len(y0), 500)])
         cdf = np.column_stack([np.zeros(len(y0)), cdf, np.ones(len(y0))])
         P = np.clip(np.diff(cdf, axis=1), 1e-9, None)
         return P / P.sum(1, keepdims=True), y0 + np.asarray(out["median"])
@@ -131,6 +155,8 @@ def main():
     ap.add_argument("--device", default="auto")
     ap.add_argument("--context", type=int, default=10000)
     ap.add_argument("--n-test", type=int, default=2000, help="test samples per fold")
+    ap.add_argument("--group", default="all", choices=["all", "reference", "recommended"],
+                    help="which input group to run (recommended = recommended + rich inputs)")
     ap.add_argument("--settings", nargs="*", default=None, metavar="gGs_hH_bB",
                     help="subset of the settings to run, e.g. g1s_h1_b20 g30s_h1_b4 (default: all)")
     ap.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE",
@@ -169,20 +195,33 @@ def main():
             if n_bins <= 10:
                 extra.append(("tabpfn_clf", T.classifier))
             t0 = time.perf_counter()
-            res, info = A.run_fold(S, cfg, tr, te_sub, extra)
-            # the recommended configuration on the same test samples (its frame has
-            # the capacity columns; samples are built in the same order)
-            rec = A.make_cfg(granularity=gran, horizon=horizon, n_bins=n_bins, **RECOMMENDED)
-            S_rec = A.get_samples(args.csv, rec)
-            assert len(S_rec.run) == len(S.run) and np.array_equal(S_rec.j, S.j)
-            res_rec, _ = A.run_fold(S_rec, rec, tr, te_sub)
-            res["dbn_rec"] = res_rec["model"]
-            res["dbn_rec_median"] = res_rec["cg_median"]
+            parents_of = {}
+            if args.group in ("all", "reference"):
+                res, info = A.run_fold(S, cfg, tr, te_sub, extra)
+                parents_of.update({m: info["parents"] for m in res})
+            else:
+                res = {}
+            # the recommended and the rich configurations on the same test samples
+            # (their frame has the capacity columns; samples are built in the same
+            # order). TabPFN gets exactly the candidate columns of each.
+            for group, opts in (("rec", RECOMMENDED), ("rich", RICH)):
+                if args.group not in ("all", "recommended"):
+                    continue
+                c2 = A.make_cfg(granularity=gran, horizon=horizon, n_bins=n_bins, **opts)
+                S2 = A.get_samples(args.csv, c2)
+                assert len(S2.run) == len(S.run) and np.array_equal(S2.j, S.j)
+                r2, i2 = A.run_fold(S2, c2, tr, te_sub, [(f"tabpfn_{group}", T.all_candidates)])
+                res[f"dbn_{group}"] = r2["model"]
+                res[f"dbn_{group}_median"] = r2["cg_median"]
+                res[f"tabpfn_{group}"] = r2[f"tabpfn_{group}"]
+                parents_of.update({f"dbn_{group}": i2["parents"], f"dbn_{group}_median": i2["parents"],
+                                   f"tabpfn_{group}": A.candidate_columns(S2, c2)})
+            info = {"parents": [], "mae_persistence_continuous": float(np.abs(S.y0[te_sub] - S.y1[te_sub]).mean())}
             for model, (summ, table) in res.items():
                 rows.append({"setting": setting, "granularity": gran, "horizon": horizon,
                              "n_bins": n_bins, "model": model, "fold": fi + 1,
                              "n_train": int(tr.sum()), "n_context": min(int(tr.sum()), args.context),
-                             **summ, "parents": ",".join(info["parents"]),
+                             **summ, "inputs": ",".join(parents_of.get(model, [])),
                              "mae_persistence_continuous": info["mae_persistence_continuous"]})
                 table.insert(0, "fold", fi + 1)
                 table.insert(0, "model", model)

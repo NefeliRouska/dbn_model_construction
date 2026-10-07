@@ -5,7 +5,9 @@ Per setting (granularity, horizon, bins) and model: accuracy on the bins,
 log-loss, MAE of the model's continuous forecast and accuracy on the steps
 where the target leaves its bin; then the paired difference between the DBN
 ("model") and every other model on the same test samples, with a 95% interval
-from a bootstrap over runs.
+from a bootstrap over the positions in the configuration schedule the datasets
+share (run k of every dataset is resampled together). No multiple-comparison
+correction is applied here.
 
 Usage:
     python analysis/tabpfn_report.py [--version v2]
@@ -29,8 +31,8 @@ def main():
     args = ap.parse_args()
     study = f"tabpfn-{args.version}"
 
-    # every run file of this version; for a (dataset, setting) that was run more
-    # than once, the newest run counts
+    # every run file of this version; for a (dataset, setting, model) that was run
+    # more than once, the newest run counts
     import glob
     runs = []
     for f in sorted(glob.glob(str(RESULTS_DIR / f"{study}_*_runs.csv.gz"))):
@@ -41,7 +43,7 @@ def main():
         d["file"] = Path(f).name
         runs.append(d)
     runs = pd.concat(runs, ignore_index=True)
-    latest = runs.groupby(["dataset", "config"])["file"].transform("max")
+    latest = runs.groupby(["dataset", "config", "model"])["file"].transform("max")
     runs = runs[runs["file"] == latest].drop(columns="file")
 
     g = runs.groupby(["config", "model"])
@@ -61,7 +63,8 @@ def main():
         r = runs[runs.config == setting]
         for dbn in [m for m in ("model", "dbn_rec", "dbn_rec_median") if m in set(r.model)]:
             for other in sorted(set(r.model) - {"model", "dbn_rec", "dbn_rec_median"}):
-                cmp = A.compare_to_reference(r, setting, dbn, setting, other, n_boot=10000)
+                cmp = A.compare_to_reference(r, setting, dbn, setting, other, n_boot=10000,
+                                             cluster=lambda run_id: str(run_id).split(":", 1)[-1])
                 rows.append({"setting": setting, "dbn": dbn, "dbn_minus": other, **cmp})
     diffs = pd.DataFrame(rows)
 

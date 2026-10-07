@@ -5,7 +5,10 @@ your files, why it was made, what the results look like before and after, and
 every test that was run. It is kept up to date; the newest entries are in the
 log at the end.
 
-- Branch: `audit-fixes` (not merged into `main`).
+- Branch: `audit-fixes` (committed, not merged into `main`, not pushed).
+- An external audit of this work is in `AUDIT.md`; what was right in it, what
+  was not, and what was changed is in
+  [2026-10-08_audit_response.md](2026-10-08_audit_response.md).
 - Full result tables and discussion:
   [2026-10-07_fixes_ablation_tabpfn.md](2026-10-07_fixes_ablation_tabpfn.md) (fixes, option studies, TabPFN v2) and
   [2026-10-07_part2_regimes_rollout_whatif.md](2026-10-07_part2_regimes_rollout_whatif.md) (regimes, roll-out, unseen configurations, capacity node, transfer).
@@ -215,6 +218,10 @@ Outputs are in `results/ablation/` and `results/tabpfn/` unless stated.
 | 31 | Per-service detectors; recommended configuration with pooled training | all | part 2 §9, §5 | service-1 detector finds an unseen service-1 regime in 98% of runs within ~13 s; pooled training 0.928 against AR 0.876 |
 | 32 | Corrected `dbn_sweep.py` at 30 s, bins 4 / 10 / 20: 383 of 1 080 configurations (stopped; full grid for the other machine) | all | part 2 §13, `results/sweeps/dbn_k_sweep_partial_30s_from_logs_20261007.csv` | no failed fold; level with AR at 30 s (+0.001 to +0.004) |
 | 33 | TabPFN v3.5 vs recommended DBN, five settings; and on unseen configurations | all | part 2 §6, `results/tabpfn/`, `results/whatif/` | 1 s: DBN ahead in accuracy, level in MAE; 30 s: TabPFN v3.5 clearly better; unseen configurations: DBN with capacity nodes ahead |
+| 34 | External audit (`AUDIT.md`) checked finding by finding; AR baseline of the sweep instrumented | periodic | audit response | 3 code findings mistaken, 8 correct or partly correct |
+| 35 | TabPFN v3.5 with the same inputs as the recommended DBN, and with rich inputs | all | audit response §C | same accuracy at 1 s; TabPFN better in log-loss and MAE; TabPFN ahead at 30 s |
+| 36 | All summaries regenerated with a schedule-level bootstrap | all | audit response §D | intervals wider, conclusions against AR unchanged |
+| 37 | Detection re-run with a held-out alarm threshold; roll-out re-run without the capacity candidate | all | audit response §E–F, part 2 §1, §2, §9 | no material change |
 
 Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
 1 s), `joint_dbn.py`, `visualize_sweep.py`, the figures in `results/figures/`.
@@ -236,14 +243,37 @@ Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
 4. Collect one dump with a different seed (the three dumps share one
    configuration schedule) and record the 30 s stabilisation period, which is
    currently lost.
-5. Decide how to present the 30 s setting, where TabPFN v3.5 is clearly better
-   than the DBN (part 2 §6); at 1 s the DBN is ahead.
+5. Decide how to present the comparison with TabPFN v3.5 (audit response §C):
+   on equal inputs it matches the DBN's accuracy at 1 s and is better in
+   log-loss and numeric error, and it is ahead at 30 s. The DBN's case rests on
+   the structure it finds, unseen configurations (capacity node),
+   interpretability, detection and cheap updating — not on beating TabPFN.
 
 ---
 
 ## 9. Log
 
 Newest first.
+
+### 2026-10-08 (after the external audit)
+
+- `AUDIT.md` assessed; response and corrected tables in
+  `docs/2026-10-08_audit_response.md` (tests 34–37).
+- `analysis/tabpfn_baseline.py`: models grouped by inputs (`--group`), TabPFN
+  also run on the recommended DBN's candidate columns and on a rich set;
+  prediction in chunks (GPU memory); every model's inputs recorded.
+  `analysis/tabpfn_report.py` and `analysis/ablation_report.py`: the bootstrap
+  resamples the position in the configuration schedule.
+- `analysis/regime_study.py`, `analysis/adaptation_study.py`: alarm threshold
+  set on a held-out half of the test runs.
+- `dbn/rollout.py`: capacity candidate only for the "capacity" structure.
+- `dbn/dbn_sweep.py`: result CSV written after every configuration.
+- 1 s small-grid sweep outputs and current Markov-test / LSTM outputs added to
+  `results/`. `results/markov_test_results.csv` and
+  `results/lstm_baseline_results.csv` are the old, pre-fix files.
+- Not changed, on purpose: the sweep's AR baseline, the evidence reduction in
+  `evaluate()`, `ensure_self_loops` — the audit's findings A, L and K do not
+  hold (see the response).
 
 ### 2026-10-08
 

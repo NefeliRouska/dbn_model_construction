@@ -1,5 +1,12 @@
 # Part 2 — regimes, roll-out, unseen configurations, capacity node, transfer
 
+> **Corrected on 8 October after an external audit** — see
+> [2026-10-08_audit_response.md](2026-10-08_audit_response.md). The roll-out and
+> detection numbers below are the re-run ones. Intervals printed in this
+> document resample runs; the three datasets share one configuration schedule,
+> so the intervals to quote are the schedule-level ones in the audit response
+> (wider, same conclusions).
+
 7 October 2026, evening. Continues [2026-10-07_fixes_ablation_tabpfn.md](2026-10-07_fixes_ablation_tabpfn.md).
 All numbers are pooled over the three datasets unless a dataset is named; the
 target is `throughput_3`, 1 s, 20 bins, two lags, unless stated.
@@ -14,7 +21,8 @@ target is `throughput_3`, 1 s, 20 bins, two lags, unless stated.
    moderately well (§1).
 2. **The DBN as one model of the chain can be unrolled, for about two seconds.**
    Beyond that, a table trained directly for the horizon is better, and beyond
-   ~10 s plain AR is. A slow "level" state variable halves the loss (§2).
+   ~10 s plain AR is. A slow "level" state variable recovers about half of the
+   accuracy lost to the direct table at 30 s (§2).
 3. **For configurations never seen in training, tables over (cores, quality)
    fail; a learned capacity node fixes it.** Capacity = cores × rate(data
    quality), with one rate function shared by the three services, learned from
@@ -26,13 +34,16 @@ target is `throughput_3`, 1 s, 20 bins, two lags, unless stated.
    4 bins) (§4).
 5. **Models transfer across workloads** as long as the training workload varied
    the load. Pooling the three workloads is best everywhere (§5).
-6. **TabPFN v3.5** (run on 8 October, §6): at 1 s the recommended DBN is ahead
-   in bin accuracy (0.922 against 0.906 at 20 bins) and level as a numeric
-   forecast; at 30 s TabPFN v3.5 is clearly better (MAE 6.5 against 10.4); on
-   unseen configurations the DBN with capacity nodes is ahead (0.73 against 0.58).
+6. **TabPFN v3.5** (run on 8 October; corrected after the audit, see
+   [audit response §C](2026-10-08_audit_response.md)): given the same input
+   columns as the recommended DBN, TabPFN v3.5 has the same bin accuracy at 1 s
+   (0.924 against 0.922 at 20 bins) and is better in log-loss and as a number
+   (2.8 against 3.7 requests/s); at 30 s the best TabPFN is ahead on every
+   measure. On unseen configurations the DBN with capacity nodes is ahead
+   (0.73 against 0.58).
 7. **Detection works much better with the whole network than with one
    variable.** Summing the surprise of all eight nodes, an unannounced
-   reconfiguration is caught 93% of the time at 1% false alarms (73% with
+   reconfiguration is caught 94% of the time at 1% false alarms (74% with
    `throughput_3` alone); an unseen saturation regime is separated with AUC
    0.98 (0.76) (§9).
 8. **Adaptation is cheap.** After a new regime appears, re-estimating the
@@ -42,9 +53,8 @@ target is `throughput_3`, 1 s, 20 bins, two lags, unless stated.
    limited to the variable's service and its input, capacity node, capacity
    chain at reconfigurations, conditional-median read-out. For `throughput_3`:
    accuracy 0.922 against AR 0.875 at 1 s; MAE 3.94 requests/s against 4.65 for
-   persistence. On identical test samples it is ahead of TabPFN v2 in accuracy
-   (0.922 against 0.902 at 1 s; 0.889 against 0.848 at 30 s, 20 bins) and level
-   or slightly ahead in MAE (3.72 against 3.92; 10.4 against 11.3).
+   persistence. (The comparison with TabPFN v2 in §11 gave the DBN more input
+   columns than TabPFN and should not be quoted; see point 6.)
 
 ---
 
@@ -78,15 +88,18 @@ What this says:
   `buffer_size_3` says whether service 3 is backed up, `throughput_2` against
   `throughput_3` says who is limiting whom. The table has a separate row for
   each of those situations, i.e. it *is* regime-specific in its values.
-- **Structure:** `throughput_3(t)`, `throughput_2(t)`, `throughput_2(t−1)` are
-  selected in every regime except one. When the bottleneck is at service 2 or
+- **Structure:** the global search selects `throughput_3(t)`, `throughput_2(t)`
+  and `throughput_2(t−1)` in all 15 fits. Searches run on one regime's data
+  alone are less stable: all three are selected in 13 of 15 fits for `s1`,
+  8 of 15 for `none` and 6 of 15 for `s23`. When the bottleneck is at service 2 or
   3 the search often drops `throughput_2` in favour of latency, the target's
   own lag and the quality setting — when service 3 is the limit, its output no
   longer follows its input. So the structure does shift in that regime, but
   the global structure with the queue as a parent covers it better than a
   dedicated one.
 - **A regime the model has never seen is a different matter:** accuracy falls
-  by 4–12 points (0.917 → 0.796 for `s1`), log-loss triples. The tables do
+  by 3.6 points for `s23`, 6.6 for `none` and 12.1 for `s1` (0.917 → 0.796),
+  and log-loss rises by a factor of 1.4 to 3.8. The tables do
   not extrapolate. This is the case that matters for fault injection.
 
 **Detecting a regime the model was not trained on**, from its surprise
@@ -100,10 +113,15 @@ configuration; alarm = surprise on a single step):
 
 | | AUC | Reconfigurations caught at 1% false alarms |
 |---|---|---|
-| DBN, 1 s | 0.880 | 73% |
-| AR, 1 s | 0.884 | 65% |
+| DBN, 1 s | 0.880 | 74% |
+| AR, 1 s | 0.884 | 68% |
 | DBN, 30 s | 0.881 | 31% |
-| AR, 30 s | 0.879 | 30% |
+| AR, 30 s | 0.879 | 31% |
+
+(The alarm threshold is set on the ordinary steps of a random half of the test
+runs and the rates are measured on the other half, where it produced 1.0–1.4%
+false alarms. The first version of this table set the threshold on the same
+steps it was scored on.)
 
 About a quarter of reconfigurations do not move `throughput_3` out of its bin
 and cannot be seen by any detector on that variable.
@@ -127,12 +145,17 @@ and t−1; each has one table; the model is unrolled with 100 particles from
 | Persistence | 0.900 | 0.892 | 0.887 | 0.881 | 0.862 |
 | AR table for that horizon | 0.898 | 0.890 | 0.884 | 0.880 | 0.860 |
 | **Direct table for that horizon** | 0.931 | 0.907 | **0.894** | **0.891** | **0.872** |
-| Roll-out, learned structure | 0.930 | 0.910 | 0.881 | 0.849 | 0.764 |
-| Roll-out, parents limited to own service + input | **0.934** | **0.911** | 0.880 | 0.849 | 0.765 |
-| Roll-out, + same-slice chain edge | 0.929 | 0.911 | 0.878 | 0.847 | 0.778 |
+| Roll-out, learned structure | 0.930 | 0.909 | 0.883 | 0.853 | 0.771 |
+| Roll-out, parents limited to own service + input | **0.934** | **0.912** | 0.884 | 0.855 | 0.767 |
+| Roll-out, + same-slice chain edge | 0.929 | 0.911 | 0.877 | 0.844 | 0.775 |
 | Roll-out, + cores and quality forced | 0.906 | 0.898 | 0.861 | 0.811 | 0.707 |
 | Roll-out, + capacity node forced | 0.917 | 0.904 | 0.879 | 0.850 | 0.779 |
-| Roll-out, + slow level variable | 0.929 | 0.909 | 0.884 | 0.866 | 0.821 |
+| Roll-out, + slow level variable | 0.929 | 0.909 | 0.886 | 0.868 | 0.825 |
+
+(Re-run on 8 October: in the first version the capacity node was offered as a
+candidate parent to every structure, and was picked in 47 of the 630
+non-capacity structure rows. Here only the "capacity" row has it. The numbers
+moved by at most 0.007.)
 
 - Up to 2 s the unrolled one-step model is as good as or better than a table
   trained for that horizon. From 5 s it falls behind, and from 10 s it is
@@ -142,7 +165,11 @@ and t−1; each has one table; the model is unrolled with 100 particles from
   pulls the sample back, so the particles diffuse.
 - Adding an exponential moving average of each throughput as a slow state
   variable (updated deterministically) gives the model something to return to:
-  0.765 → 0.821 at 30 s, 0.849 → 0.866 at 10 s. It does not close the gap.
+  compared with the same structure without it, accuracy goes from 0.767 to
+  0.825 at 30 s and from 0.855 to 0.868 at 10 s. It does not close the gap to
+  the direct table (0.872 and 0.891). A variant in which the level variable is
+  only offered to the search instead of forced (`level?` in the result files)
+  gives 0.816 at 30 s.
 - Knowing the future load or freezing it at its current value makes no
   difference to any of these (the selected parents rarely include the load).
 - The same pattern holds for `throughput_1` and `throughput_2`
@@ -177,7 +204,8 @@ over saturated runs, raised to the largest throughput per core seen in an
 unsaturated run when that is higher (a service that keeps up cannot be over
 capacity; at quality 100 and 200 services almost never saturate and this bound
 is all there is), and forced to be non-increasing in quality. The estimate
-sits 5–13% above the plain saturated median; see the open points. `capacity_i = cores_i × rate(quality_i)` is then
+sits 3% (quality 800–1000) to 13% (quality 300) above the plain saturated
+median; see the open points. `capacity_i = cores_i × rate(quality_i)` is then
 an ordinary exogenous variable on the same bins as the flows.
 
 Results on the unseen configurations (15 480 rows):
@@ -259,6 +287,12 @@ obtained for `throughput_3` at 1 s and 20 bins.
 
 ## 6. TabPFN v3.5
 
+> **Read this section together with [audit response §C](2026-10-08_audit_response.md).**
+> In the table below the DBN is the recommended configuration (two time steps,
+> capacity node) while TabPFN was given one time step and no capacity. With
+> the same inputs TabPFN v3.5 matches the DBN's accuracy at 1 s and is better in
+> log-loss and MAE; the first reading point below does not hold on equal inputs.
+
 Run on 8 October after the Prior Labs licence was accepted (the library needs
 its own licence step at https://ux.priorlabs.ai in addition to the Hugging Face
 login; on this Python, prefix commands with `SSL_CERT_FILE=$(python -m certifi)`).
@@ -323,9 +357,11 @@ configuration):
 
 | Score | AUC | Caught at 1% false alarms |
 |---|---|---|
-| `throughput_3` only | 0.880 | 73% |
-| the three throughputs | 0.915 | 84% |
-| **all eight nodes** | **0.984** | **93%** |
+| `throughput_3` only | 0.880 | 74% |
+| the three throughputs | 0.915 | 86% |
+| **all eight nodes** | **0.984** | **94%** |
+
+(Held-out threshold, as in §1; realised false alarms 0.9–1.4%.)
 
 ![Reconfiguration detection](figures/reconfiguration_detection.png)
 
@@ -374,8 +410,8 @@ When service 1 enters a saturation regime the model has never seen, the
 detector built from service 1's own nodes fires in 98% of the runs, within
 about 13 seconds, while the detectors of the other services mostly stay
 quiet: the alarm also says *where*. For an unannounced reconfiguration (one
-step) the per-service detectors catch 86–90% at 1% false alarms, all nodes
-together 93%.
+step) the per-service detectors catch 86–91% at 1% false alarms, all nodes
+together 94%.
 
 A regime in which the first service saturates is noticed in three quarters of
 the runs, typically within 80 seconds, by the all-node detector. The other two are mostly missed by this
@@ -434,6 +470,10 @@ median: a queue grows or shrinks by (input − output) every second, which is
 linear.
 
 ### Recommended DBN against TabPFN v2, same test samples
+
+> Unequal inputs: the DBN here sees two time steps and the capacity node,
+> TabPFN v2 one time step and no capacity. Kept for the record; the equal-input
+> comparison (with v3.5) is in the [audit response §C](2026-10-08_audit_response.md).
 
 `analysis/tabpfn_baseline.py` now also scores the recommended configuration
 (`dbn_rec`, and `dbn_rec_median` for its numeric forecast) on exactly the

@@ -1,0 +1,10 @@
+target,n_bins,score_first_order,score_second_order,improvement,verdict
+throughput_1,4,0.9587142530313428,0.9662594371997255,0.007545184168382679,HOLDS — second-order features do not meaningfully improve accuracy; first-order DBN is adequate
+throughput_1,10,0.8792267215740106,0.9026424159231297,0.023415694349119054,"BORDERLINE — second-order features improve accuracy by 2-5%; weak memory effect, acknowledge in paper"
+throughput_1,20,0.7855021734156943,0.8255730954015099,0.04007092198581563,"BORDERLINE — second-order features improve accuracy by 2-5%; weak memory effect, acknowledge in paper"
+throughput_2,4,0.9711370395790437,0.9720041180507893,0.0008670784717456081,HOLDS — second-order features do not meaningfully improve accuracy; first-order DBN is adequate
+throughput_2,10,0.9129512697323268,0.9155204758636468,0.0025692061313200565,HOLDS — second-order features do not meaningfully improve accuracy; first-order DBN is adequate
+throughput_2,20,0.855351178220087,0.867083047357584,0.01173186913749702,HOLDS — second-order features do not meaningfully improve accuracy; first-order DBN is adequate
+throughput_3,4,0.951105010295127,0.9679432624113475,0.016838252116220587,HOLDS — second-order features do not meaningfully improve accuracy; first-order DBN is adequate
+throughput_3,10,0.9039281628917868,0.9060901395561658,0.002161976664379006,HOLDS — second-order features do not meaningfully improve accuracy; first-order DBN is adequate
+throughput_3,20,0.847476549988561,0.8618302447952415,0.014353694806680473,HOLDS — second-order features do not meaningfully improve accuracy; first-order DBN is adequate
