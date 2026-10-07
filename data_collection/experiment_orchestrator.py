@@ -207,6 +207,24 @@ def append_results_csv(path: Path, run_tag: str, metric_name: str, result):
                 ])
 
 
+def log_rps(output_csv: Path, run_tag: str, rps: int):
+    """
+    Record every arrival rate actually sent to the source, with the wall-clock
+    time and the orchestrator's own clock. The workload pattern is a function
+    of GLOBAL_START_TIME, which is not otherwise stored anywhere: without this
+    file the load can only be recovered from the metrics (buffer_size of the
+    first service) or re-derived with a guessed clock offset.
+    """
+    path = output_csv.with_name(output_csv.name.replace("prom_dump_all_", "rps_log_"))
+    write_header = (not path.exists()) or (path.stat().st_size == 0)
+    now = time.time()
+    with path.open("a", newline="") as f:
+        w = csv.writer(f)
+        if write_header:
+            w.writerow(["timestamp", "global_elapsed_sec", "rps", "run_tag"])
+        w.writerow([now, now - GLOBAL_START_TIME, rps, run_tag])
+
+
 # ================================
 #   CORE / QUALITY SAMPLING LOGIC
 # ================================
@@ -402,7 +420,8 @@ def workload_rps(pattern_name: str, elapsed_sec: float, seed: int):
         raise ValueError(f"Unknown workload pattern: {pattern_name}")
 
 
-def run_workload_pattern(pattern_name: str, measure_sec: int, seed: int, control_interval_sec: int = WORKLOAD_CONTROL_INTERVAL_SEC):
+def run_workload_pattern(pattern_name: str, measure_sec: int, seed: int, control_interval_sec: int = WORKLOAD_CONTROL_INTERVAL_SEC,
+                         output_csv: Path = None, run_tag: str = ""):
     """
     Apply the selected workload pattern to svc1 during the full measurement window.
     Only send /change_rps when the value actually changes.
@@ -425,6 +444,8 @@ def run_workload_pattern(pattern_name: str, measure_sec: int, seed: int, control
         if rps != last_rps:
             print(f"  Updating RPS -> {rps} (pattern={pattern_name}, global_elapsed={global_elapsed:.1f}s)")
             set_rps(SERVICES["svc1"], SOURCE_CLIENT_ID, rps)
+            if output_csv is not None:
+                log_rps(output_csv, run_tag, rps)
             last_rps = rps
 
         remaining = measure_sec - run_elapsed
@@ -503,6 +524,7 @@ def run_experiment(seed: int):
                 initial_rps = workload_rps(workload_pattern, initial_elapsed, seed)
                 print(f"  Initial RPS -> {initial_rps} (global_elapsed={initial_elapsed:.1f}s)")
                 set_rps(SERVICES["svc1"], SOURCE_CLIENT_ID, initial_rps)
+                log_rps(output_csv, run_tag, initial_rps)
 
                 # 5) Stabilize
                 print(f"  Stabilizing {STABILIZE_SEC}s...")
@@ -510,7 +532,8 @@ def run_experiment(seed: int):
 
                 # 6) Measure window while workload pattern is applied
                 t_start = time.time()
-                run_workload_pattern(workload_pattern, MEASURE_SEC, seed)
+                run_workload_pattern(workload_pattern, MEASURE_SEC, seed,
+                                     output_csv=output_csv, run_tag=run_tag)
                 t_end = time.time()
 
                 # 7) Query ALL Prometheus metric names for this window

@@ -11,3 +11,4 @@ matplotlib==3.11.2
 torch==2.14.1            # analysis/lstm_baseline.py only
 mrmr-selection==0.2.8    # only used by archived scripts (imported as `mrmr`)
 requests==2.34.2         # data_collection/experiment_orchestrator.py only
+tabpfn==9.1.0            # analysis/tabpfn_baseline.py only

@@ -4,7 +4,7 @@ markov_order_analysis.py
 Standalone: measures held-out log-likelihood and accuracy of
 throughput_3 as a function of Markov order (0 = persistence-only
 self-loop, 1, 2, 3, ... lags), using the same 5-fold expanding-window
-temporal CV as the main sweep.
+temporal CV as the main sweep. Lags never reach across two runs.
 
 Deliberately isolated from feature selection, discretizer sweep, and
 other variables: this answers "how much of throughput_3's own history
@@ -17,6 +17,9 @@ Usage:
 """
 
 import argparse
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import KBinsDiscretizer
@@ -25,67 +28,44 @@ from pgmpy.models import BayesianNetwork
 from pgmpy.estimators import BayesianEstimator
 from pgmpy.inference import VariableElimination
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dbn"))
+import data as D  # noqa: E402
+
 TARGET = "throughput_3"
-N_BINS = 4
+N_BINS = 20
 MAX_ORDER = 5
-MODELING_GRANULARITY_SEC = 30
+MODELING_GRANULARITY_SEC = 1
 K_FOLDS = 5
+MAX_CPT_COLUMNS = 2_000_000
 
 
 def load_and_aggregate(csv_path, target):
-    df = pd.read_csv(csv_path)
-    for col in list(df.columns):
-        if "time" in col.lower():
-            df.drop(columns=[col], inplace=True)
-    for col in df.columns:
-        try:
-            df[col] = pd.to_numeric(df[col])
-        except Exception:
-            pass
-    df = df.select_dtypes(include=[np.number]).dropna().reset_index(drop=True)
-    if target not in df.columns:
-        raise ValueError(f"{target} not found")
-    df = df[[target]]
-
-    group_ids = np.arange(len(df)) // MODELING_GRANULARITY_SEC
-    return df.groupby(group_ids).mean().reset_index(drop=True)
+    """Chronological rows of the target with run_id / pos bookkeeping (see dbn/data.py)."""
+    df = D.load_wide(csv_path, target, verbose=False)
+    df = D.aggregate(df, MODELING_GRANULARITY_SEC)
+    return df[D.META_COLS + [target]]
 
 
 def make_temporal_folds(series, k=K_FOLDS):
-    n = len(series)
-    boundaries = np.linspace(0, n, k + 2, dtype=int)
-    folds = []
-    for i in range(k):
-        train_end = boundaries[i + 1]
-        test_start = boundaries[i + 1]
-        test_end = boundaries[i + 2]
-        train = series.iloc[0:train_end].reset_index(drop=True)
-        test = series.iloc[test_start:test_end].reset_index(drop=True)
-        if len(train) < 2 or len(test) < 2:
-            continue
-        folds.append((train, test))
-    return folds
+    return D.make_temporal_folds(series, k=k)
 
 
-def make_lagged(disc_series, order):
+def make_lagged(disc_series, run_id, order, max_order):
     """
-    disc_series: 1D int array, already discretized.
+    disc_series: 1D int array, already discretized; run_id: the run of each row.
     order=0: only the current value, predicting itself one step ahead
              (this reproduces AR-DBN / persistence-shaped model).
     order=k: current value plus k lags as evidence.
+    Lags and the next value are taken inside a run. Rows that lack max_order
+    lags are dropped for every order, so all orders are scored on the same rows.
     Returns a DataFrame with columns lag0..lagK and 'next' (target).
     """
-    n = len(disc_series)
-    cols = {}
-    for L in range(order + 1):
-        cols[f"lag{L}"] = np.empty(n)
-        cols[f"lag{L}"][:L] = np.nan
-        cols[f"lag{L}"][L:] = disc_series[:n - L] if L > 0 else disc_series
-    cols["next"] = np.concatenate([disc_series[1:], [np.nan]])
-
-    out = pd.DataFrame(cols)
-    out = out.dropna().reset_index(drop=True)
-    return out.astype(int)
+    s = pd.Series(disc_series, dtype=float)
+    g = s.groupby(np.asarray(run_id))
+    cols = {f"lag{L}": g.shift(L) for L in range(max_order + 1)}
+    cols["next"] = g.shift(-1)
+    out = pd.DataFrame(cols).dropna().reset_index(drop=True).astype(int)
+    return out[[f"lag{L}" for L in range(order + 1)] + ["next"]]
 
 
 def fit_and_eval(train_lagged, test_lagged, order, n_states):
@@ -131,9 +111,14 @@ def fit_and_eval(train_lagged, test_lagged, order, n_states):
 
 
 def main():
+    global N_BINS, MODELING_GRANULARITY_SEC
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", required=True)
+    parser.add_argument("--n-bins", type=int, default=N_BINS)
+    parser.add_argument("--granularity", type=int, default=MODELING_GRANULARITY_SEC,
+                        help="seconds per row")
     args = parser.parse_args()
+    N_BINS, MODELING_GRANULARITY_SEC = args.n_bins, args.granularity
 
     raw = load_and_aggregate(args.csv, TARGET)
     folds = make_temporal_folds(raw)
@@ -154,10 +139,17 @@ def main():
 
             n_states = len(disc.bin_edges_[0]) - 1
 
-            train_lagged = make_lagged(train_disc, order)
-            test_lagged  = make_lagged(test_disc, order)
+            train_lagged = make_lagged(train_disc, train_raw["run_id"], order, MAX_ORDER)
+            test_lagged  = make_lagged(test_disc, test_raw["run_id"], order, MAX_ORDER)
 
             if len(train_lagged) < 10 or len(test_lagged) < 10:
+                continue
+
+            # the table of 'next' has n_states ** (order + 1) columns
+            if float(n_states) ** (order + 1) > MAX_CPT_COLUMNS:
+                if fold_idx == 0:
+                    print(f"order={order}  skipped: {n_states}^{order + 1} parent "
+                          f"configurations (limit {MAX_CPT_COLUMNS:.0e})")
                 continue
 
             try:

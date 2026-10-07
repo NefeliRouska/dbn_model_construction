@@ -8,6 +8,20 @@ DBN dataset and appends it as a new column `rps`.
 RPS logic is a direct port from the experiment orchestrator (experiment_orchestrator.py).
 All constants must match those in the orchestrator exactly.
 
+NOTE -- prefer the measured load. `buffer_size_1` in the dumps takes exactly the
+values the orchestrator sends to /change_rps, at the moment they take effect;
+dbn/data.py exposes it as `rps`. This script rebuilds the INTENDED pattern,
+which differs from what was applied: the controller only re-evaluates the
+pattern every 20 s, and not at all between two measurement windows.
+
+Clock alignment: the pattern runs on the orchestrator's clock, which starts
+when the orchestrator is launched -- before the containers are restarted and
+before the first stabilisation period -- while the first row of the dump is
+the start of the first measurement window. The offset between the two is not
+recorded, so it is estimated: the shift (0..600 s) that makes the rebuilt
+pattern agree best with `--align-to` (default buffer_size_1). Use `--offset`
+to set it by hand.
+
 Usage:
     python add_rps_feature.py \
         --csv dbn_wide_20260313_192652_seed783122.csv \
@@ -139,7 +153,32 @@ def parse_args():
                    help="Random seed used by the experiment orchestrator (default: 783122).")
     p.add_argument("--out",     default=None,
                    help="Output path. Defaults to <stem>_with_rps.csv alongside input.")
+    p.add_argument("--align-to", default="buffer_size_1",
+                   help="Measured-load column used to estimate the clock offset "
+                        "(default: buffer_size_1). Ignored if --offset is given.")
+    p.add_argument("--offset",  type=float, default=None,
+                   help="Seconds between orchestrator start and the first row of the dump.")
     return p.parse_args()
+
+
+def rps_for(pattern, elapsed, seed):
+    if pattern == "periodic":
+        return rps_periodic(elapsed)
+    if pattern == "oial":
+        return rps_oial(elapsed)
+    if pattern == "unpredictable":
+        return rps_unpredictable(elapsed, seed)
+    raise ValueError(f"Unknown pattern: {pattern}")
+
+
+def estimate_offset(pattern, elapsed, seed, measured, max_offset=600):
+    """Shift of the orchestrator clock that best reproduces the measured load."""
+    best_offset, best_match = 0.0, -1.0
+    for offset in range(0, max_offset + 1):
+        match = float(np.mean(np.abs(rps_for(pattern, elapsed + offset, seed) - measured) <= 1))
+        if match > best_match:
+            best_offset, best_match = float(offset), match
+    return best_offset, best_match
 
 
 def main():
@@ -168,14 +207,21 @@ def main():
     print(f"  Elapsed range    : {elapsed.min():.1f}s – {elapsed.max():.1f}s  "
           f"({elapsed.max() / 3600:.2f} h)")
 
-    if args.pattern == "periodic":
-        rps_values = rps_periodic(elapsed)
-    elif args.pattern == "oial":
-        rps_values = rps_oial(elapsed)
-    elif args.pattern == "unpredictable":
-        rps_values = rps_unpredictable(elapsed, args.seed)
+    if args.offset is not None:
+        offset = args.offset
+        print(f"  Clock offset     : {offset:.0f}s (given)")
+    elif args.align_to in df.columns:
+        measured = pd.to_numeric(df[args.align_to], errors="coerce").to_numpy(dtype=float)
+        match0 = float(np.mean(np.abs(rps_for(args.pattern, elapsed, args.seed) - measured) <= 1))
+        offset, match = estimate_offset(args.pattern, elapsed, args.seed, measured)
+        print(f"  Clock offset     : {offset:.0f}s (estimated from '{args.align_to}': "
+              f"{match:.1%} of rows agree, {match0:.1%} without the offset)")
     else:
-        raise ValueError(f"Unknown pattern: {args.pattern}")
+        offset = 0.0
+        print(f"  [WARN] '{args.align_to}' not in the table: no clock alignment, "
+              f"the pattern may be shifted by tens of seconds", file=sys.stderr)
+
+    rps_values = rps_for(args.pattern, elapsed + offset, args.seed)
 
     print(f"  RPS range        : [{rps_values.min()}, {rps_values.max()}]")
     print(f"  Unique RPS values: {len(np.unique(rps_values))}")

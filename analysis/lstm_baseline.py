@@ -4,22 +4,28 @@ lstm_baseline.py
 Publication-clean LSTM baseline for comparison against the learned DBN.
 
 Fixes included:
-  - Chronological train/test split
+  - Chronological train/test split, made of whole runs
   - Feature scaler fit only on training data
   - Target scaler fit only on training data
-  - No future leakage
+  - No future leakage; an input window never reaches across two runs
+  - The target's own past is part of the input window (the persistence
+    baseline it is compared with uses nothing else)
+  - Mini-batch training
   - Reproducible random seeds
   - LSTM regression on scaled throughput
   - MAE on original throughput scale
   - Discretized accuracy using train-fitted bins
-  - Persistence baseline for sanity check
+  - Persistence baseline on the same test rows
 
 Usage:
-    python lstm_baseline.py
+    python analysis/lstm_baseline.py --csv data/dbn_wide_<stem>.csv [--granularity 30]
 """
 
-import ast
+import argparse
 import random
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -29,12 +35,13 @@ import torch.nn as nn
 from sklearn.preprocessing import MinMaxScaler, KBinsDiscretizer
 from sklearn.metrics import mean_absolute_error
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dbn"))
+import data as D  # noqa: E402
+
 
 # ============================================================
 # CONFIG — must match DBN sweep
 # ============================================================
-
-CSV_PATH = "share/metrics/dbn_wide_20260310_160246_seed161312.csv"
 
 TARGETS = ["throughput_1", "throughput_2", "throughput_3"]
 
@@ -44,9 +51,11 @@ TRAIN_FRAC = 0.8
 
 SEQUENCE_LENGTH = 5
 
-N_BINS = 4
+N_BINS = 20
 
-EPOCHS = 100
+EPOCHS = 30
+
+BATCH_SIZE = 256
 
 HIDDEN_SIZE = 64
 
@@ -78,40 +87,12 @@ def set_seed(seed=0):
 # ============================================================
 
 def load_and_clean(path):
-    df = pd.read_csv(path)
-
-    if "s_config" in df.columns:
-        def parse(val):
-            try:
-                d = ast.literal_eval(val)
-                return d if isinstance(d, dict) else {}
-            except Exception:
-                return {}
-
-        cfg = df["s_config"].apply(parse).apply(pd.Series)
-        cfg = cfg.rename(columns=lambda c: f"s_config_{c}")
-
-        df = pd.concat([df.drop(columns=["s_config"]), cfg], axis=1)
-
-    for col in list(df.columns):
-        if "time" in col.lower():
-            df.drop(columns=[col], inplace=True)
-
-    for col in df.columns:
-        try:
-            df[col] = pd.to_numeric(df[col])
-        except Exception:
-            pass
-
-    df = df.select_dtypes(include=[np.number])
-    df = df.dropna().reset_index(drop=True)
-
-    return df
+    """Chronological rows with run_id / pos / timestamp bookkeeping (dbn/data.py)."""
+    return D.load_wide(path, verbose=False)
 
 
 def aggregate(df):
-    group_ids = np.arange(len(df)) // MODELING_GRANULARITY_SEC
-    return df.groupby(group_ids).mean().reset_index(drop=True)
+    return D.aggregate(df, MODELING_GRANULARITY_SEC)
 
 
 # ============================================================
@@ -141,12 +122,13 @@ class LSTMPredictor(nn.Module):
 # ============================================================
 
 def get_feature_cols(df, target):
+    # the target itself is an input: the window holds its last SEQUENCE_LENGTH values
     return [
-        c for c in df.columns
-        if c != target
-        and not (
+        c for c in D.feature_cols(df)
+        if not (
             EXCLUDE_OTHER_THROUGHPUTS
             and c.startswith("throughput_")
+            and c != target
         )
     ]
 
@@ -155,18 +137,15 @@ def get_feature_cols(df, target):
 # SEQUENCE PREPARATION WITHOUT LEAKAGE
 # ============================================================
 
-def make_sequences(X, y, seq_len):
-    X_seqs = []
-    y_seqs = []
-
-    for i in range(seq_len, len(X)):
-        X_seqs.append(X[i - seq_len:i])
-        y_seqs.append(y[i])
-
-    return (
-        np.array(X_seqs, dtype=np.float32),
-        np.array(y_seqs, dtype=np.float32)
-    )
+def make_sequences(X, y, run_id, seq_len):
+    """
+    Window X[i-seq_len:i] predicts y[i]; only windows that lie, together with
+    row i, inside one run are kept. Also returns the index i of every window.
+    """
+    idx = np.array([i for i in range(seq_len, len(X))
+                    if run_id[i - seq_len] == run_id[i]], dtype=int)
+    X_seqs = np.stack([X[i - seq_len:i] for i in idx]).astype(np.float32)
+    return X_seqs, y[idx].astype(np.float32), idx
 
 
 def prepare_data(df, target):
@@ -174,74 +153,34 @@ def prepare_data(df, target):
 
     X_raw = df[feature_cols].to_numpy(dtype=float)
     y_raw = df[target].to_numpy(dtype=float)
+    run_id = df["run_id"].to_numpy()
 
-    split_raw = int(TRAIN_FRAC * len(df))
-
-    if split_raw <= SEQUENCE_LENGTH:
-        raise ValueError(
-            "Training set is too small for the chosen SEQUENCE_LENGTH."
-        )
-
-    X_train_raw = X_raw[:split_raw]
-    X_test_raw = X_raw[split_raw - SEQUENCE_LENGTH:]
-
-    y_train_raw = y_raw[:split_raw]
-    y_test_raw = y_raw[split_raw - SEQUENCE_LENGTH:]
+    # first TRAIN_FRAC of the runs -> train, the rest -> test
+    split_run = np.quantile(np.unique(run_id), TRAIN_FRAC)
+    is_train = run_id <= split_run
 
     # Fit scalers only on training data
     X_scaler = MinMaxScaler()
     y_scaler = MinMaxScaler()
 
-    X_scaler.fit(X_train_raw)
-    y_scaler.fit(y_train_raw.reshape(-1, 1))
+    X_scaler.fit(X_raw[is_train])
+    y_scaler.fit(y_raw[is_train].reshape(-1, 1))
 
-    X_train_scaled = X_scaler.transform(X_train_raw)
-    X_test_scaled = X_scaler.transform(X_test_raw)
+    X_scaled = X_scaler.transform(X_raw)
+    y_scaled = y_scaler.transform(y_raw.reshape(-1, 1)).flatten()
 
-    y_train_scaled = y_scaler.transform(
-        y_train_raw.reshape(-1, 1)
-    ).flatten()
-
-    y_test_scaled = y_scaler.transform(
-        y_test_raw.reshape(-1, 1)
-    ).flatten()
-
-    X_train_seq, y_train_seq = make_sequences(
-        X_train_scaled,
-        y_train_scaled,
-        SEQUENCE_LENGTH
-    )
-
-    X_test_seq, y_test_seq_scaled = make_sequences(
-        X_test_scaled,
-        y_test_scaled,
-        SEQUENCE_LENGTH
-    )
-
-    # Original-scale y for evaluation
-    _, y_test_seq_raw = make_sequences(
-        X_test_raw,
-        y_test_raw,
-        SEQUENCE_LENGTH
-    )
-
-    _, y_train_seq_raw = make_sequences(
-        X_train_raw,
-        y_train_raw,
-        SEQUENCE_LENGTH
-    )
+    X_seq, y_seq_scaled, idx = make_sequences(X_scaled, y_scaled, run_id, SEQUENCE_LENGTH)
+    train = is_train[idx]
 
     return {
-        "X_train": X_train_seq,
-        "y_train_scaled": y_train_seq,
-        "y_train_raw": y_train_seq_raw,
-        "X_test": X_test_seq,
-        "y_test_scaled": y_test_seq_scaled,
-        "y_test_raw": y_test_seq_raw,
+        "X_train": X_seq[train],
+        "y_train_scaled": y_seq_scaled[train],
+        "X_test": X_seq[~train],
+        "y_test_raw": y_raw[idx[~train]],
+        "y_prev_raw": y_raw[idx[~train] - 1],     # persistence forecast for the same rows
+        "y_train_raw": y_raw[is_train],
         "y_scaler": y_scaler,
         "feature_cols": feature_cols,
-        "split_raw": split_raw,
-        "y_raw": y_raw,
     }
 
 
@@ -249,16 +188,11 @@ def prepare_data(df, target):
 # BASELINES
 # ============================================================
 
-def persistence_baseline(df, target):
+def persistence_baseline(data):
     """
-    Predict y(t) = y(t-1) on the same test region.
+    Predict y(t) = y(t-1) on exactly the rows the LSTM is tested on.
     """
-    y = df[target].to_numpy(dtype=float)
-
-    split_raw = int(TRAIN_FRAC * len(df))
-
-    y_test = y[split_raw:]
-    y_pred = y[split_raw - 1:-1]
+    y_test, y_pred = data["y_test_raw"], data["y_prev_raw"]
 
     mae = float(mean_absolute_error(y_test, y_pred))
 
@@ -268,7 +202,7 @@ def persistence_baseline(df, target):
         strategy="uniform"
     )
 
-    kbd.fit(y[:split_raw].reshape(-1, 1))
+    kbd.fit(data["y_train_raw"].reshape(-1, 1))
 
     y_test_disc = kbd.transform(
         y_test.reshape(-1, 1)
@@ -287,8 +221,7 @@ def persistence_baseline(df, target):
 # TRAIN + EVALUATE LSTM
 # ============================================================
 
-def run_lstm(df, target):
-    data = prepare_data(df, target)
+def run_lstm(data):
 
     X_train = torch.tensor(data["X_train"], dtype=torch.float32)
     y_train = torch.tensor(
@@ -316,18 +249,25 @@ def run_lstm(df, target):
 
     model.train()
 
+    generator = torch.Generator().manual_seed(RANDOM_STATE)
+
     for epoch in range(EPOCHS):
-        optimizer.zero_grad()
+        order = torch.randperm(len(X_train), generator=generator)
 
-        pred = model(X_train)
+        for start in range(0, len(order), BATCH_SIZE):
+            batch = order[start:start + BATCH_SIZE]
 
-        loss = criterion(pred, y_train)
+            optimizer.zero_grad()
 
-        loss.backward()
+            pred = model(X_train[batch])
 
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            loss = criterion(pred, y_train[batch])
 
-        optimizer.step()
+            loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+            optimizer.step()
 
     model.eval()
 
@@ -341,16 +281,13 @@ def run_lstm(df, target):
     mae = float(mean_absolute_error(y_test_raw, y_pred_raw))
 
     # Discretized accuracy
-    split_raw = data["split_raw"]
-    y_raw = data["y_raw"]
-
     kbd = KBinsDiscretizer(
         n_bins=N_BINS,
         encode="ordinal",
         strategy="uniform"
     )
 
-    kbd.fit(y_raw[:split_raw].reshape(-1, 1))
+    kbd.fit(data["y_train_raw"].reshape(-1, 1))
 
     y_test_disc = kbd.transform(
         y_test_raw.reshape(-1, 1)
@@ -381,13 +318,22 @@ def run_lstm(df, target):
 # ============================================================
 
 def main():
+    global MODELING_GRANULARITY_SEC, N_BINS
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--csv", required=True)
+    parser.add_argument("--granularity", type=int, default=MODELING_GRANULARITY_SEC,
+                        help="seconds per row")
+    parser.add_argument("--n-bins", type=int, default=N_BINS)
+    args = parser.parse_args()
+    MODELING_GRANULARITY_SEC, N_BINS = args.granularity, args.n_bins
+
     set_seed(RANDOM_STATE)
 
     print("=" * 60)
     print("LSTM BASELINE")
     print("=" * 60)
 
-    raw = load_and_clean(CSV_PATH)
+    raw = load_and_clean(args.csv)
     raw = aggregate(raw)
 
     print(f"Rows after aggregation: {len(raw)}")
@@ -411,8 +357,9 @@ def main():
         print(f"Target: {target}")
         print("-" * 40)
 
-        lstm_mae, lstm_acc, diagnostics = run_lstm(raw, target)
-        pers_mae, pers_acc = persistence_baseline(raw, target)
+        data = prepare_data(raw, target)
+        lstm_mae, lstm_acc, diagnostics = run_lstm(data)
+        pers_mae, pers_acc = persistence_baseline(data)
 
         print(f"  LSTM MAE:              {lstm_mae:.3f}")
         print(f"  LSTM accuracy:         {lstm_acc:.3f} (n_bins={N_BINS})")
@@ -446,10 +393,13 @@ def main():
 
     if results:
         out = pd.DataFrame(results)
-        out.to_csv("lstm_baseline_results.csv", index=False)
+        stem = Path(args.csv).stem.replace("dbn_wide_", "")
+        out_path = (Path(__file__).resolve().parent.parent / "results"
+                    / f"lstm_baseline_results_{stem}_{MODELING_GRANULARITY_SEC}s.csv")
+        out.to_csv(out_path, index=False)
 
         print("=" * 60)
-        print("Results saved to lstm_baseline_results.csv")
+        print(f"Results saved to {out_path}")
         print("=" * 60)
 
 

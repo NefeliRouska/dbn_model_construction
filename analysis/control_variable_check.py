@@ -2,7 +2,12 @@
 control_variable_check.py
 
 Checks whether changes in control variables (cores_*, data_quality_*)
-are followed by changes in throughput_3 more often than baseline.
+come with changes in throughput_3 more often than baseline.
+
+Rows are chronological and a configuration only changes between two runs, so
+"a control changed" means: this row is the first of a new run. The question is
+whether throughput_3 is in a different bin on that row than on the row before
+it (the last one of the previous run).
 
 If control changes predict throughput changes, that's a real
 early-warning signal persistence structurally cannot use -- persistence
@@ -13,27 +18,23 @@ Usage:
 """
 
 import argparse
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dbn"))
+import data as D  # noqa: E402
 
 TARGET = "throughput_3"
 MODELING_GRANULARITY_SEC = 30
 
 
 def load_and_aggregate(csv_path):
-    df = pd.read_csv(csv_path)
-    for col in list(df.columns):
-        if "time" in col.lower():
-            df.drop(columns=[col], inplace=True)
-    for col in df.columns:
-        try:
-            df[col] = pd.to_numeric(df[col])
-        except Exception:
-            pass
-    df = df.select_dtypes(include=[np.number]).dropna().reset_index(drop=True)
-
-    group_ids = np.arange(len(df)) // MODELING_GRANULARITY_SEC
-    return df.groupby(group_ids).mean().reset_index(drop=True)
+    """Chronological rows, aggregated inside runs (see dbn/data.py)."""
+    df = D.load_wide(csv_path, TARGET, verbose=False)
+    return D.aggregate(df, MODELING_GRANULARITY_SEC)
 
 
 def main():
@@ -62,19 +63,21 @@ def main():
     # purely so "did it change" means "did it cross a bin boundary",
     # not "did it move by 0.0001"
     target_bins = pd.qcut(raw[TARGET], 4, labels=False, duplicates="drop")
-    changes_next = (target_bins.shift(-1) != target_bins)
+    # did the target change bin between the previous row and this one, i.e.
+    # over the same step as the (possible) control change
+    changes_next = (target_bins.shift(1) != target_bins)
 
-    # drop the last row (no "next" to compare against) and align
+    # drop the first row (no previous row to compare against)
     df_check = pd.DataFrame({
         "acted": acted,
         "changes_next": changes_next,
-    }).iloc[:-1]
+    }).iloc[1:]
 
     summary = df_check.groupby("acted")["changes_next"].agg(["mean", "count"])
     summary.index = summary.index.map({False: "no control change", True: "control changed"})
 
     print("=== RESULT ===")
-    print(summary.rename(columns={"mean": "P(throughput changes next step)", "count": "n_rows"}))
+    print(summary.rename(columns={"mean": "P(throughput changes bin on this step)", "count": "n_rows"}))
 
     rate_no_action = summary.loc["no control change", "mean"]
     rate_action = summary.loc["control changed", "mean"] if "control changed" in summary.index else float("nan")
@@ -85,7 +88,7 @@ def main():
     else:
         ratio = rate_action / rate_no_action if rate_no_action > 0 else float("inf")
         print(f"Baseline change rate (no control action): {rate_no_action:.1%}")
-        print(f"Change rate right after a control action:  {rate_action:.1%}")
+        print(f"Change rate across a control action:       {rate_action:.1%}")
         print(f"Ratio: {ratio:.2f}x")
         print()
         if ratio > 2:
@@ -104,11 +107,11 @@ def main():
     print("\n=== PER-COLUMN BREAKDOWN ===")
     for col in control_cols:
         col_diff = raw[col].diff().abs()
-        col_acted = (col_diff > 1e-9).iloc[:-1]
+        col_acted = (col_diff > 1e-9).iloc[1:]
         if col_acted.sum() == 0:
             print(f"{col}: never changes in this data, skipping")
             continue
-        rate = changes_next.iloc[:-1][col_acted].mean()
+        rate = changes_next.iloc[1:][col_acted].mean()
         n = col_acted.sum()
         print(f"{col}: change rate after action = {rate:.1%} (n={n} actions) "
               f"vs baseline {rate_no_action:.1%}")

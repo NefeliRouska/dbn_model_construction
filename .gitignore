@@ -7,3 +7,7 @@ __pycache__/
 venv/
 .venv/
 .idea/
+
+# Per-run tables of dbn/ablation.py and analysis/tabpfn_baseline.py (large; regenerate by re-running the study)
+results/ablation/*_runs.csv.gz
+results/tabpfn/*_runs.csv.gz

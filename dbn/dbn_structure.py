@@ -4,6 +4,8 @@ import pandas as pd
 from pgmpy.estimators import HillClimbSearch, BicScore, BayesianEstimator, StructureScore
 from pgmpy.models import BayesianNetwork
 
+from data import pair_index, two_slice_frame
+
 
 # ----------------------------
 # CONFIG DEFAULTS
@@ -13,6 +15,17 @@ HC_MAX_ITER    = 25000
 HC_TABU_LENGTH = 100
 HC_EPSILON     = 1e-4
 HC_USE_CACHE   = True
+
+# A conditional probability table with more columns than this is refused
+# before pgmpy tries to allocate it (columns = product of the parents' numbers
+# of states). 2e6 columns x 50 states is already ~1 GB.
+MAX_CPT_COLUMNS = 2_000_000
+
+
+def consecutive_pairs(n_rows, horizon=1):
+    """(t, t+horizon) row pairs of a single uninterrupted series."""
+    i = np.arange(max(n_rows - horizon, 0))
+    return i, i + horizon
 
 
 # ============================================================
@@ -95,7 +108,7 @@ def build_blacklist(df):
     """
     Encodes domain causal ordering as forbidden edges.
 
-    Layer 0: control parameters (cores_, data_quality_)
+    Layer 0: control parameters (cores_, data_quality_) and the offered load (rps)
     Layer 1: container resource metrics
     Layer 2: performance outcomes (throughput_, avg_p_latency_, buffer_size_)
     Layer 3: failure/error indicators
@@ -114,7 +127,7 @@ def build_blacklist(df):
         c = c.lower()
         return any(s in c for s in subs)
 
-    layer0 = [v for v in all_vars if has_prefix(v, ["cores_", "data_quality_"])]
+    layer0 = [v for v in all_vars if has_prefix(v, ["cores_", "data_quality_"]) or v == "rps"]
 
     layer1 = [
         v for v in all_vars
@@ -195,20 +208,29 @@ def learn_intra_edges(
 # ============================================================
 # INTER-SLICE EDGES
 # ============================================================
-def build_inter_only_blacklist(nodes):
+def build_inter_only_blacklist(nodes, exog_cols=()):
     """
     Only allow edges of the form X_t -> Y_t1.
     Self-transition edges X_t -> X_t1 are allowed.
+    Exogenous variables (set from outside the system) take no parent other
+    than their own previous value, and may point at the other variables of
+    their own slice (E_t1 -> Y_t1): their t1 value is known when the
+    prediction is made, so it competes with the X_t parents for the same
+    max_indegree slots.
     """
     black = []
+    exog = set(exog_cols)
 
     for a in nodes:
         for b in nodes:
             if a == b:
                 continue
             black.append((f"{a}_t", f"{b}_t"))
-            black.append((f"{a}_t1", f"{b}_t1"))
             black.append((f"{a}_t1", f"{b}_t"))
+            if not (a in exog and b not in exog):
+                black.append((f"{a}_t1", f"{b}_t1"))
+            if b in exog:
+                black.append((f"{a}_t", f"{b}_t1"))
 
     return black
 
@@ -222,19 +244,24 @@ def learn_inter_edges_only(
     tabu_length=HC_TABU_LENGTH,
     epsilon=HC_EPSILON,
     use_cache=HC_USE_CACHE,
+    pairs=None,
+    exog_cols=(),
 ):
     """
     Learn inter-slice edges X_t -> Y_t1, where "t1" means t+horizon
     rather than strictly the next row. horizon=1 reproduces the
     original one-step-ahead behavior exactly.
+
+    pairs: (rows at t, rows at t1). Default: consecutive rows of df, which is
+    only right when df is one uninterrupted series.
     """
     nodes = list(df.columns)
 
-    df_t = df.iloc[:-horizon].reset_index(drop=True).add_suffix("_t")
-    df_t1 = df.iloc[horizon:].reset_index(drop=True).add_suffix("_t1")
-    df_2s = pd.concat([df_t, df_t1], axis=1)
+    if pairs is None:
+        pairs = consecutive_pairs(len(df), horizon)
+    df_2s = two_slice_frame(df, pairs)
 
-    blacklist = build_inter_only_blacklist(nodes)
+    blacklist = build_inter_only_blacklist(nodes, exog_cols)
 
     est = HillClimbSearch(df_2s, use_cache=use_cache)
     best = est.estimate(
@@ -247,11 +274,7 @@ def learn_inter_edges_only(
         show_progress=False,
     )
 
-    return [
-        (u, v)
-        for (u, v) in best.edges()
-        if u.endswith("_t") and v.endswith("_t1")
-    ]
+    return [(u, v) for (u, v) in best.edges() if v.endswith("_t1")]
 
 
 # ============================================================
@@ -289,7 +312,34 @@ def ensure_self_loops(columns, inter_edges, target=None):
 # ============================================================
 # FIT 2-SLICE DBN
 # ============================================================
-def fit_consistent_2slice_bn(df, intra_edges, inter_edges, horizon=1):
+def backoff_cpd(model, df_2s, state_names, node, fallback_parent, ess):
+    """
+    Table of `node` with a Dirichlet prior centred on P(node | fallback_parent)
+    instead of on the uniform distribution: `ess` pseudo-observations per
+    parent configuration, distributed as the one-parent table says. A parent
+    configuration that was never (or rarely) seen in training then predicts
+    what the autoregressive model would, not "all states equally likely".
+    """
+    parents = sorted(model.get_parents(node))
+    cards = [len(state_names[p]) for p in parents]
+    n_states, k = len(state_names[node]), len(state_names[fallback_parent])
+
+    counts = np.zeros((k, n_states))
+    np.add.at(counts, (df_2s[fallback_parent].to_numpy(), df_2s[node].to_numpy()), 1.0)
+    counts += ess / (k * n_states)                       # BDeu-smoothed one-parent table
+    table = counts / counts.sum(axis=1, keepdims=True)   # [state of fallback parent, state of node]
+
+    # pgmpy orders the columns of a CPD as the product of the (sorted) parents'
+    # states, last parent varying fastest
+    fallback_state = np.unravel_index(np.arange(int(np.prod(cards))), cards)[parents.index(fallback_parent)]
+    pseudo_counts = ess * table[fallback_state].T        # (n_states, n_configurations)
+
+    estimator = BayesianEstimator(model, df_2s, state_names=state_names)
+    return estimator.estimate_cpd(node, prior_type="dirichlet", pseudo_counts=pseudo_counts)
+
+
+def fit_consistent_2slice_bn(df, intra_edges, inter_edges, horizon=1, pairs=None,
+                             state_cards=None, protect=None, backoff=None, ess=10):
     """
     Build and fit a two-slice DBN, where "t1" means t+horizon.
 
@@ -298,25 +348,67 @@ def fit_consistent_2slice_bn(df, intra_edges, inter_edges, horizon=1):
     intra-slice parents and inter-slice parents; replacing their CPDs
     with intra-only CPDs would make the CPD parent sets inconsistent
     with the graph.
+
+    state_cards: {column: number of states}. Pass the discretiser's bin count
+    so that a state that only shows up in the test data is still a valid
+    state of the model. Default: the largest value seen in df, plus one.
+
+    protect: node whose parent set must not be touched. If the table of any
+    other node would exceed MAX_CPT_COLUMNS, parents are dropped from it (and
+    reported); if the protected node's table is too large, this raises.
+
+    backoff: (node, fallback_parent) -- estimate that node's table with
+    backoff_cpd instead of the uniform BDeu prior.
     """
     intra_t = [(f"{u}_t", f"{v}_t") for (u, v) in intra_edges]
     intra_t1 = [(f"{u}_t1", f"{v}_t1") for (u, v) in intra_edges]
 
     edges_2s = intra_t + intra_t1 + inter_edges
 
-    df_t = df.iloc[:-horizon].reset_index(drop=True).add_suffix("_t")
-    df_t1 = df.iloc[horizon:].reset_index(drop=True).add_suffix("_t1")
-    df_2s = pd.concat([df_t, df_t1], axis=1)
+    if pairs is None:
+        pairs = consecutive_pairs(len(df), horizon)
+    df_2s = two_slice_frame(df, pairs)
 
     model_2s = BayesianNetwork(edges_2s)
 
     # Explicit state names prevent silent state-order or missing-bin issues.
+    state_cards = state_cards or {}
     state_names_2s = {}
     for v in df.columns:
-        max_val = int(df[v].max())
-        states = list(range(max_val + 1))
+        n_states = max(int(df[v].max()) + 1, int(state_cards.get(v, 0)))
+        states = list(range(n_states))
         state_names_2s[f"{v}_t"] = states
         state_names_2s[f"{v}_t1"] = states
+
+    def cpt_columns(node):
+        return float(np.prod([float(len(state_names_2s[p]))
+                              for p in model_2s.get_parents(node)]))
+
+    inter_set = set(inter_edges)
+    for node in list(model_2s.nodes()):
+        if cpt_columns(node) <= MAX_CPT_COLUMNS:
+            continue
+        if node == protect:
+            raise RuntimeError(
+                f"CPT of {node} needs {cpt_columns(node):.3g} parent configurations "
+                f"({len(model_2s.get_parents(node))} parents) for {len(df_2s)} training rows; "
+                f"refusing to fit (limit {MAX_CPT_COLUMNS:.0e})."
+            )
+        # Any other node: a t1 node inherits its same-slice parents and gets
+        # lagged ones on top. Drop same-slice parents first, largest first,
+        # until the table fits; the self-loop is kept.
+        base = node.rsplit("_", 1)[0]
+        removable = sorted(
+            (p for p in model_2s.get_parents(node) if p != f"{base}_t"),
+            key=lambda p: ((p, node) in inter_set, -len(state_names_2s[p])),
+        )
+        dropped = []
+        while cpt_columns(node) > MAX_CPT_COLUMNS and removable:
+            p = removable.pop(0)
+            model_2s.remove_edge(p, node)
+            dropped.append(p)
+        print(f"[CPT LIMIT] {node}: dropped parents {dropped}")
+    edges_2s = list(model_2s.edges())
 
     model_2s.fit(
         df_2s,
@@ -325,6 +417,12 @@ def fit_consistent_2slice_bn(df, intra_edges, inter_edges, horizon=1):
         equivalent_sample_size=10,
         state_names=state_names_2s,
     )
+
+    # (with the fallback parent as the only parent the table already is the
+    # autoregressive one, and the BDeu fit above is kept)
+    if (backoff is not None and backoff[1] in model_2s.get_parents(backoff[0])
+            and len(model_2s.get_parents(backoff[0])) > 1):
+        model_2s.add_cpds(backoff_cpd(model_2s, df_2s, state_names_2s, backoff[0], backoff[1], ess))
 
     return model_2s, edges_2s
 
@@ -345,6 +443,10 @@ def build_dbn_model_2s(
     tabu_length=HC_TABU_LENGTH,
     epsilon=HC_EPSILON,
     use_cache=HC_USE_CACHE,
+    pairs=None,
+    exog_cols=(),
+    state_cards=None,
+    cpt_prior="bdeu",
 ):
     """
     lag_cols: list of column names already present in df_ready holding
@@ -359,11 +461,30 @@ def build_dbn_model_2s(
     (a deliberate system action just happened), distinct from lag_cols
     (more history of the target's own past value).
 
-    target_parents_only: when True (the default), target_t1's parents
-    are restricted to exactly {target_t} plus lag_cols plus control_col.
-    This keeps the model from depending on OTHER variables' t1 (future)
-    values, which it cannot observe at prediction time and which were
-    found to dilute the signal.
+    target_parents_only: which parents target_t1 may have.
+      True / "ar_only": exactly {target_t} plus lag_cols plus control_col.
+          The learned structure then has no effect on the prediction of
+          the target: the model is an autoregression on the target's bins.
+      "observed": everything that is observed at prediction time -- any
+          X_t -> target_t1 or E_t1 -> target_t1 (E exogenous, its t1 value
+          is given as evidence) edge found by the two-slice search, and
+          the forced lag / control edges. Same-slice edges from other
+          variables are dropped: their t1 value is not known when the
+          prediction is made.
+      False / "learned": whatever structure learning returns.
+
+    pairs: (rows at t, rows at t1) used for everything that looks one
+    step ahead; see data.pair_index. Default: consecutive rows.
+
+    exog_cols: columns set from outside the system (cores, data quality,
+    offered load). They get no learned parents and may be same-slice
+    parents of the target in "observed" mode.
+
+    state_cards: {column: number of states}, see fit_consistent_2slice_bn.
+
+    cpt_prior: "bdeu" (uniform prior, what pgmpy fits by default) or
+    "backoff" (target_t1's table falls back to P(target_t1 | target_t), see
+    backoff_cpd).
 
     horizon: how many rows ahead "t1" points to. horizon=1 is the
     original one-step-ahead model.
@@ -396,6 +517,8 @@ def build_dbn_model_2s(
         tabu_length=tabu_length,
         epsilon=epsilon,
         use_cache=use_cache,
+        pairs=pairs,
+        exog_cols=exog_cols,
     )
 
     inter = ensure_self_loops(df_ready.columns, inter, target=target)
@@ -410,7 +533,11 @@ def build_dbn_model_2s(
             if forced not in inter:
                 inter = inter + [forced]
 
-    if target_parents_only and target is not None:
+    mode = {True: "ar_only", False: "learned"}.get(target_parents_only, target_parents_only)
+    if mode not in ("ar_only", "observed", "learned"):
+        raise ValueError("target_parents_only must be True/'ar_only', 'observed' or False/'learned'")
+
+    if mode == "ar_only" and target is not None:
         keep = {f"{target}_t"} | {f"{lag_col}_t" for lag_col in lag_cols}
         if control_col is not None:
             keep.add(f"{control_col}_t")
@@ -418,6 +545,19 @@ def build_dbn_model_2s(
         inter = [(u, v) for (u, v) in inter
                  if v != f"{target}_t1" or u in keep]
 
-    model_2s, edges = fit_consistent_2slice_bn(df_ready, intra, inter, horizon=horizon)
+    if mode == "observed" and target is not None:
+        # same-slice parents of the target come from the two-slice search
+        # (exogenous ones only), not from the single-slice graph
+        intra = [(u, v) for (u, v) in intra if v != target]
+
+    if mode == "ar_only" or not exog_cols:
+        # no exogenous same-slice parents unless they are explicitly allowed
+        inter = [(u, v) for (u, v) in inter if u.endswith("_t")]
+
+    backoff = (f"{target}_t1", f"{target}_t") if (cpt_prior == "backoff" and target is not None) else None
+    model_2s, edges = fit_consistent_2slice_bn(df_ready, intra, inter, horizon=horizon,
+                                               pairs=pairs, state_cards=state_cards,
+                                               protect=f"{target}_t1" if target is not None else None,
+                                               backoff=backoff)
 
     return model_2s, edges, intra, inter

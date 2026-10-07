@@ -18,6 +18,7 @@ from sklearn.metrics import f1_score, log_loss, precision_score, recall_score
 from pgmpy.inference import VariableElimination
 from pgmpy.estimators import HillClimbSearch, BayesianEstimator
 from pgmpy.models import BayesianNetwork
+import data as D
 from dbn_structure import build_dbn_model_2s, make_score
 
 
@@ -131,6 +132,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description="DBN hyperparameter sweep")
     parser.add_argument("--csv", type=str, required=True,
                         help="Path to wide DBN CSV file")
+    parser.add_argument("--granularity", type=int, default=1,
+                        help="Seconds per modelling row (1 = no aggregation)")
+    parser.add_argument("--n-bins", type=int, nargs="+", default=[10, 20, 30],
+                        help="Bin counts to sweep")
+    parser.add_argument("--horizon", type=int, default=1,
+                        help="Rows ahead to predict")
+    parser.add_argument("--exog", default="controls+load",
+                        choices=["none", "controls", "controls+load"],
+                        help="Variables whose value at t+horizon is given to the model")
+    parser.add_argument("--cv", default="expanding", choices=["expanding", "blocked"])
     return parser.parse_args()
 
 args = parse_args()
@@ -147,25 +158,28 @@ DISCRETIZATION_METHODS    = ["classic_uniform", "classic_quantile", "kmeans",
 
 SCORES                    = ["bic", "aic"]
 
-N_BINS_VALUES      = [4, 6, 10]
+N_BINS_VALUES      = args.n_bins
 DBSCAN_EPS         = 0.30
 DBSCAN_MIN_SAMPLES = 10
 
 MB_QUICK_MAX_ITER = 8000
 
+# Mutual-information estimates (k-NN based) are computed on at most this many
+# randomly chosen training rows; at 1 s granularity a fold has >100k rows.
+MI_MAX_ROWS = 20000
+
 # ============================================================
 # MEMORY (lag) + CONTROL FLAG + VELOCITY + HORIZON CONFIG
 #
-# N_LAGS: how many past steps of TARGET are given as extra evidence,
-# in addition to its current value (the self-loop). Confirmed via a
-# standalone Markov-order test that order 1 is the true optimum for
-# throughput_3's own dynamics -- N_LAGS=2 was consistently worse
-# across every bin count and horizon tested.
+# N_LAGS: how many past steps of TARGET are FORCED as extra parents of
+# target_t1, in addition to its current value (the self-loop). Every
+# forced parent multiplies the size of the target's table by n_bins.
 #
-# USE_CONTROL_FLAG: adds one binary column -- "did any data_quality_*
-# variable change in the last step" -- as a forced parent of
-# target_t1. Confirmed via control_variable_check.py: throughput_3
-# changes ~2.6x more often right after a control action than baseline.
+# USE_CONTROL_FLAG: adds one binary column -- "did any cores_* or
+# data_quality_* variable change in the last step" -- as a forced parent
+# of target_t1. A configuration is constant inside a run, so the flag is
+# 1 only on the first row of a run. With EXOG_MODE != "none" the model is
+# given the configuration at t+1 directly, which makes the flag redundant.
 #
 # USE_VELOCITY_FEATURES: for every OTHER variable that feature
 # selection kept in train_ready (not the target itself), adds that
@@ -174,30 +188,47 @@ MB_QUICK_MAX_ITER = 8000
 # everything above.
 #
 # WARNING: this multiplies target_t1's parent count by roughly 2x
-# the number of feature-selected variables. At K=4 feature selection
-# typically keeps 2-4 other variables, so this can mean 7-11 total
-# parents -- well beyond anything previously tested (3-4 parents was
-# the largest config that worked; everything past that collapsed
-# under CPD table sparsity in every prior experiment in this
-# pipeline's history). This flag exists to test that hypothesis
-# directly and honestly, not because it's expected to help --
-# treat a negative or collapsed result here as informative, not as
-# a bug.
+# the number of feature-selected variables, and the table of target_t1
+# has one column per combination of its parents' states. Forcing them
+# all is refused by dbn_structure.MAX_CPT_COLUMNS for anything but the
+# smallest settings. dbn/ablation.py offers lags and velocities as
+# CANDIDATE parents instead, which is the workable form of this idea.
 #
-# TARGET_PARENTS_ONLY: keep target_t1's parents restricted to exactly
-# the self-loop, the lag columns, the control flag, and (if enabled)
-# the velocity columns -- no other variables' t1 values.
+# TARGET_PARENTS_ONLY: which parents target_t1 may have (see
+# dbn_structure.build_dbn_model_2s).
+#   "ar_only"  -- self-loop, lag columns, control flag, velocity columns.
+#                 The learned structure then cannot influence the
+#                 prediction of the target.
+#   "observed" -- additionally every learned X_t -> target_t1 edge and the
+#                 same-slice edges from the exogenous variables.
+#   "learned"  -- whatever structure learning returns.
 #
 # HORIZON: how many rows ahead "t1" points to, for every model built
 # in this file (DBN, AR-DBN, and the persistence baseline). HORIZON=1
 # is one-step-ahead. Static BN SI is deliberately NOT affected by
 # HORIZON -- it was never a forecast to begin with.
+#
+# EXOG_MODE: variables set from outside the system. Their value at
+# t+HORIZON is what the operator is about to apply (cores, data quality)
+# or what the workload generator sends (rps); it is given to the model as
+# evidence, and they take no learned parents.
+#
+# CROSS_RUN_PAIRS: also use the (last row of run k, first row of run k+1)
+# transitions, i.e. the configuration changes. Every other (t, t+1) pair
+# lies inside one run.
 # ============================================================
-N_LAGS = 1
-USE_CONTROL_FLAG = True
-USE_VELOCITY_FEATURES = True
-TARGET_PARENTS_ONLY = True
-HORIZON = 1
+N_LAGS = 0
+USE_CONTROL_FLAG = False
+USE_VELOCITY_FEATURES = False
+TARGET_PARENTS_ONLY = "observed"
+HORIZON = args.horizon
+EXOG_MODE = args.exog
+CROSS_RUN_PAIRS = True
+CV_SCHEME = args.cv
+# "backoff": the table of target_t1 falls back to P(target_t1 | target_t) for
+# parent configurations with little or no training data (see
+# dbn_structure.backoff_cpd). "bdeu": pgmpy's uniform prior.
+CPT_PRIOR = "backoff"
 
 # ============================================================
 # CHANGE 5 (evidence protocol fix — see evaluate() docstring below):
@@ -247,7 +278,7 @@ _stem = Path(CSV_PATH).stem.replace("dbn_wide_", "") + f"_run{_timestamp}_g{GIT_
 MODEL_SAVE_DIR   = str(RESULTS_DIR / "models" / f"saved_dbn_models_top5_{_stem}")
 RESULTS_CSV_PATH = str(RESULTS_DIR / "sweeps" / f"dbn_k_sweep_results_{_stem}.csv")
 
-MODELING_GRANULARITY_SEC = 30
+MODELING_GRANULARITY_SEC = args.granularity
 MAX_ROWS = None
 
 
@@ -255,73 +286,24 @@ MAX_ROWS = None
 # LOAD + CLEAN
 # ============================================================
 def load_and_clean(path, target):
-    df = pd.read_csv(path)
-
-    if "s_config" in df.columns:
-        def parse(val):
-            try:
-                d = ast.literal_eval(val)
-                return d if isinstance(d, dict) else {}
-            except Exception:
-                return {}
-        cfg = df["s_config"].apply(parse).apply(pd.Series)
-        cfg = cfg.rename(columns=lambda c: f"s_config_{c}")
-        df  = pd.concat([df.drop(columns=["s_config"]), cfg], axis=1)
-
-    for col in list(df.columns):
-        if "time" in col.lower():
-            df.drop(columns=[col], inplace=True)
-
-    for col in df.columns:
-        try:
-            df[col] = pd.to_numeric(df[col])
-        except Exception:
-            pass
-
-    df = df.select_dtypes(include=[np.number])
-    df = df.dropna().reset_index(drop=True)
-
-    if target not in df.columns:
-        raise ValueError(f"TARGET '{target}' not found after cleaning.")
-
-    non_target_cols = [c for c in df.columns if c != target]
-    if non_target_cols:
-        selector = VarianceThreshold(threshold=VARIANCE_THRESHOLD)
-        selector.fit(df[non_target_cols])
-        kept = [c for c, s in zip(non_target_cols, selector.get_support()) if s]
-        dropped = [c for c, s in zip(non_target_cols, selector.get_support()) if not s]
-        if dropped:
-            print(f"[VARIANCE FILTER] Dropped {len(dropped)} near-constant columns: {dropped}")
-        df = df[kept + [target]]
-
-    return df
+    """Chronological rows with run_id / pos / timestamp bookkeeping (see data.py)."""
+    return D.load_wide(path, target, variance_threshold=VARIANCE_THRESHOLD)
 
 
 # ============================================================
 # TEMPORAL AGGREGATION
 # ============================================================
-def aggregate_to_modeling_granularity(df, every_n_seconds=MODELING_GRANULARITY_SEC):
-    group_ids = np.arange(len(df)) // every_n_seconds
-    return df.groupby(group_ids).mean().reset_index(drop=True)
+def aggregate_to_modeling_granularity(df, every_n_seconds=None):
+    if every_n_seconds is None:
+        every_n_seconds = MODELING_GRANULARITY_SEC
+    return D.aggregate(df, every_n_seconds)
 
 
 # ============================================================
 # TEMPORAL K-FOLD SPLITS
 # ============================================================
 def make_temporal_folds(df, k=K_FOLDS):
-    n          = len(df)
-    boundaries = np.linspace(0, n, k + 2, dtype=int)
-    folds      = []
-    for i in range(k):
-        train_end  = boundaries[i + 1]
-        test_start = boundaries[i + 1]
-        test_end   = boundaries[i + 2]
-        train_df   = df.iloc[0:train_end].reset_index(drop=True)
-        test_df    = df.iloc[test_start:test_end].reset_index(drop=True)
-        if len(train_df) < 2 or len(test_df) < 2:
-            continue
-        folds.append((train_df, test_df))
-    return folds
+    return D.make_temporal_folds(df, k=k, scheme=CV_SCHEME)
 
 
 # ============================================================
@@ -598,8 +580,14 @@ def _split_X_y(df):
     return X, y
 
 
+def _mi_rows(df):
+    if len(df) <= MI_MAX_ROWS:
+        return df
+    return df.sample(n=MI_MAX_ROWS, random_state=0)
+
+
 def _top_k_by_mi(train_df, k):
-    X, y = _split_X_y(train_df)
+    X, y = _split_X_y(_mi_rows(train_df))
     if X.shape[1] == 0:
         return []
     mi    = mutual_info_regression(X.to_numpy(), y.to_numpy(), random_state=0)
@@ -608,7 +596,7 @@ def _top_k_by_mi(train_df, k):
 
 
 def select_mrmr(train_df, k):
-    X, y = _split_X_y(train_df)
+    X, y = _split_X_y(_mi_rows(train_df))
     cols = list(X.columns)
     if not cols:
         return []
@@ -646,7 +634,8 @@ def _build_blacklist_single_slice(df):
     def has_substring(c, subs):
         return any(s in c.lower() for s in subs)
 
-    layer0 = [v for v in all_vars if has_prefix(v, ["cores_", "data_quality_"])]
+    layer0 = [v for v in all_vars
+              if has_prefix(v, ["cores_", "data_quality_"]) or v == D.LOAD_COL]
     layer1 = [v for v in all_vars if has_prefix(
         v, ["container_cpu_", "container_memory_", "container_network_",
             "container_fs_", "container_blkio_"])]
@@ -788,6 +777,7 @@ def apply_feature_selection(train_raw, test_raw, fs_method, k,
     if fs_method == "mrmr":
         predictors  = select_mrmr(train_raw, k)
         always_keep = [c for c in train_raw.columns if c.startswith("throughput_")]
+        always_keep += D.exog_cols(train_raw.columns, EXOG_MODE)
         keep        = list(dict.fromkeys(predictors + [TARGET] + always_keep))
         train_fs    = train_raw[keep].copy()
         test_fs     = test_raw[keep].copy()
@@ -800,6 +790,7 @@ def apply_feature_selection(train_raw, test_raw, fs_method, k,
             n_bins=n_bins, disc_method=disc_method
         )
         always_keep = [c for c in train_raw.columns if c.startswith("throughput_")]
+        always_keep += D.exog_cols(train_raw.columns, EXOG_MODE)
         keep        = list(dict.fromkeys(predictors + [TARGET] + always_keep))
         train_fs    = train_raw[keep].copy()
         test_fs     = test_raw[keep].copy()
@@ -943,9 +934,9 @@ class BestPerBinsTracker:
 # ============================================================
 # BASELINES
 # ============================================================
-def persistence_baseline(test_ready, horizon=1):
-    y_prev = test_ready[TARGET].iloc[:-horizon].to_numpy()
-    y_true = test_ready[TARGET].iloc[horizon:].to_numpy()
+def persistence_baseline(test_ready, pairs):
+    y_prev = test_ready[TARGET].to_numpy()[pairs[0]]
+    y_true = test_ready[TARGET].to_numpy()[pairs[1]]
     acc       = float(np.mean(y_prev == y_true))
     f1        = float(f1_score(y_true, y_prev, average="macro", zero_division=0))
     precision = float(precision_score(y_true, y_prev, average="macro", zero_division=0))
@@ -956,7 +947,33 @@ def persistence_baseline(test_ready, horizon=1):
 # ============================================================
 # EVALUATION
 # ============================================================
-def evaluate(model_2s, test_df, target_override=None, evidence_mode=None, horizon=1):
+def _nan_result():
+    return {
+        "accuracy":  float("nan"),
+        "f1":        float("nan"),
+        "precision": float("nan"),
+        "recall":    float("nan"),
+        "log_loss":  float("nan"),
+        "accuracy_change": float("nan"),
+        "n_change":  0,
+        "cache_hits": 0,
+        "cache_size": 0,
+        "n_queries":  0,
+    }
+
+
+def evaluate(model_2s, test_df, pairs, target_override=None, evidence_mode=None,
+             exog_cols=()):
+    """
+    Predict eval_target at row pairs[1] from the evidence at row pairs[0]
+    (every column in `ev_cols`, as <col>_t) plus the value of the exogenous
+    columns at row pairs[1] (as <col>_t1).
+
+    When every parent of the target node is part of the evidence, the rest
+    of the evidence cannot change the answer (none of it is a descendant of
+    the target), so only the parents are passed to the inference engine.
+    This is exact and keeps the number of distinct queries small.
+    """
     eval_target = target_override if target_override is not None else TARGET
     mode        = evidence_mode if evidence_mode is not None else EVIDENCE_MODE
 
@@ -973,74 +990,46 @@ def evaluate(model_2s, test_df, target_override=None, evidence_mode=None, horizo
     else:
         raise ValueError(f"Unknown evidence_mode: {mode}")
 
-    model_nodes = set(model_2s.nodes())
-    valid_cols  = [c for c in ev_cols if f"{c}_t" in model_nodes]
-
-    n = len(test_df) - horizon
+    idx_t, idx_t1 = np.asarray(pairs[0]), np.asarray(pairs[1])
+    n = len(idx_t)
     if n <= 0:
-        return {
-            "accuracy":  float("nan"),
-            "f1":        float("nan"),
-            "precision": float("nan"),
-            "recall":    float("nan"),
-            "log_loss":  float("nan"),
-            "cache_hits": 0,
-            "cache_size": 0,
-            "n_queries":  0,
-        }
+        return _nan_result()
 
     target_t1_node = f"{eval_target}_t1"
-    try:
-        n_classes = len(model_2s.get_cpds(target_t1_node).state_names[target_t1_node])
-    except Exception:
-        n_classes = None
+    model_nodes = set(model_2s.nodes())
+    ev_nodes = {f"{c}_t": (c, idx_t) for c in ev_cols if f"{c}_t" in model_nodes}
+    ev_nodes.update({f"{c}_t1": (c, idx_t1) for c in exog_cols
+                     if f"{c}_t1" in model_nodes and c != eval_target})
 
-    try:
-        target_states_eval = model_2s.get_cpds(target_t1_node).state_names[target_t1_node]
-        labels_eval        = [int(s) for s in target_states_eval]
-    except Exception:
-        labels_eval = list(range(n_classes)) if n_classes is not None else None
+    parents = set(model_2s.get_parents(target_t1_node))
+    if parents and parents <= set(ev_nodes):
+        ev_nodes = {node: ev_nodes[node] for node in sorted(parents)}
 
-    correct         = 0
-    y_true_list     = []
-    y_pred_list     = []
-    y_prob_list     = []
-    inference_cache = {}
-    cache_hits      = 0
+    target_states_eval = model_2s.get_cpds(target_t1_node).state_names[target_t1_node]
+    labels_eval        = [int(s) for s in target_states_eval]
 
-    for t in range(n):
-        evidence     = {f"{c}_t": int(test_df.iloc[t][c]) for c in valid_cols}
-        evidence_key = tuple(sorted(evidence.items()))
-        true_next    = int(test_df.iloc[t + horizon][eval_target])
+    names = sorted(ev_nodes)
+    if names:
+        E = np.column_stack([test_df[ev_nodes[node][0]].to_numpy()[ev_nodes[node][1]]
+                             for node in names]).astype(int)
+        uniq, inverse = np.unique(E, axis=0, return_inverse=True)
+        inverse = np.asarray(inverse).ravel()
+    else:
+        uniq, inverse = np.zeros((1, 0), dtype=int), np.zeros(n, dtype=int)
 
-        if evidence_key in inference_cache:
-            probs = inference_cache[evidence_key]
-            cache_hits += 1
-        else:
-            q     = infer.query([target_t1_node], evidence=evidence,
-                                show_progress=False)
-            probs = q.values / q.values.sum()
-            inference_cache[evidence_key] = probs
+    probs_u = np.empty((len(uniq), len(labels_eval)))
+    for u, row in enumerate(uniq):
+        evidence = {node: int(v) for node, v in zip(names, row)}
+        q        = infer.query([target_t1_node], evidence=evidence,
+                               show_progress=False)
+        probs_u[u] = q.values / q.values.sum()
 
-        pred_idx = int(np.argmax(probs))
+    y_prob_arr = probs_u[inverse]
+    y_true_arr = test_df[eval_target].to_numpy()[idx_t1].astype(int)
+    y_prev_arr = test_df[eval_target].to_numpy()[idx_t].astype(int)
+    y_pred_arr = np.asarray(labels_eval)[np.argmax(y_prob_arr, axis=1)]
 
-        y_true_list.append(true_next)
-        y_prob_list.append(probs)
-
-        if labels_eval is not None and pred_idx < len(labels_eval):
-            pred = labels_eval[pred_idx]
-        else:
-            pred = pred_idx
-        y_pred_list.append(pred)
-
-        if pred == true_next:
-            correct += 1
-
-    y_true_arr = np.array(y_true_list)
-    y_pred_arr = np.array(y_pred_list)
-    y_prob_arr = np.array(y_prob_list)
-
-    accuracy  = correct / n
+    accuracy  = float(np.mean(y_pred_arr == y_true_arr))
     f1        = float(f1_score(y_true_arr, y_pred_arr,
                                average="macro", zero_division=0))
     precision = float(precision_score(y_true_arr, y_pred_arr,
@@ -1048,20 +1037,17 @@ def evaluate(model_2s, test_df, target_override=None, evidence_mode=None, horizo
     recall    = float(recall_score(y_true_arr, y_pred_arr,
                                    average="macro", zero_division=0))
 
-    if labels_eval is not None:
-        labels = labels_eval
-    else:
-        labels = sorted(list(set(y_true_list)))
-
-    if y_prob_arr.shape[1] < len(labels):
-        pad = np.zeros((y_prob_arr.shape[0], len(labels) - y_prob_arr.shape[1]))
-        y_prob_arr = np.hstack([y_prob_arr, pad])
+    # accuracy on the steps where the target leaves its bin: persistence scores
+    # 0 there by construction, so this is what a model adds over "no change"
+    change = y_true_arr != y_prev_arr
+    accuracy_change = float(np.mean(y_pred_arr[change] == y_true_arr[change])) \
+        if change.any() else float("nan")
 
     eps        = 1e-12
     y_prob_arr = np.clip(y_prob_arr, eps, 1.0)
     y_prob_arr = y_prob_arr / y_prob_arr.sum(axis=1, keepdims=True)
 
-    ll = float(log_loss(y_true_arr, y_prob_arr, labels=labels))
+    ll = float(log_loss(y_true_arr, y_prob_arr, labels=labels_eval))
 
     return {
         "accuracy":   accuracy,
@@ -1069,8 +1055,10 @@ def evaluate(model_2s, test_df, target_override=None, evidence_mode=None, horizo
         "precision":  precision,
         "recall":     recall,
         "log_loss":   ll,
-        "cache_hits": cache_hits,
-        "cache_size": len(inference_cache),
+        "accuracy_change": accuracy_change,
+        "n_change":   int(change.sum()),
+        "cache_hits": n - len(uniq),
+        "cache_size": len(uniq),
         "n_queries":  n,
     }
 
@@ -1078,27 +1066,18 @@ def evaluate(model_2s, test_df, target_override=None, evidence_mode=None, horizo
 # ============================================================
 # AUTOREGRESSIVE DBN BASELINE
 # ============================================================
-def autoregressive_dbn_baseline(train_ready, test_ready, horizon=1):
+def autoregressive_dbn_baseline(train_ready, test_ready, pairs_train, pairs_test):
     nodes = list(train_ready.columns)
     edges = [(f"{v}_t", f"{v}_t1") for v in nodes]
 
-    df_t  = train_ready.iloc[:-horizon].reset_index(drop=True).add_suffix("_t")
-    df_t1 = train_ready.iloc[horizon:].reset_index(drop=True).add_suffix("_t1")
-    df_2s = pd.concat([df_t, df_t1], axis=1)
+    df_2s = D.two_slice_frame(train_ready, pairs_train)
 
     model = BayesianNetwork(edges)
-    state_names_2s = {
-        f"{v}_t":  list(range(int(max(
-            df_t[f"{v}_t"].max(),
-            test_ready[v].max() if v in test_ready.columns else 0
-        )) + 1)) for v in nodes
-    }
-    state_names_2s.update({
-        f"{v}_t1": list(range(int(max(
-            df_t1[f"{v}_t1"].max(),
-            test_ready[v].max() if v in test_ready.columns else 0
-        )) + 1)) for v in nodes
-    })
+    state_names_2s = {}
+    for v in nodes:
+        states = list(range(int(max(train_ready[v].max(), test_ready[v].max())) + 1))
+        state_names_2s[f"{v}_t"]  = states
+        state_names_2s[f"{v}_t1"] = states
     model.fit(
         df_2s,
         estimator=BayesianEstimator,
@@ -1107,9 +1086,9 @@ def autoregressive_dbn_baseline(train_ready, test_ready, horizon=1):
         state_names=state_names_2s,
     )
 
-    res = evaluate(model, test_ready, horizon=horizon)
+    res = evaluate(model, test_ready, pairs_test)
     return (res["accuracy"], res["f1"], res["precision"],
-            res["recall"], res["log_loss"])
+            res["recall"], res["log_loss"], res["accuracy_change"])
 
 
 # ============================================================
@@ -1234,66 +1213,53 @@ def static_bn_inference_baseline(train_ready, test_ready, score_name):
     return accuracy, f1, precision, recall, ll
 
 
-def add_lag_pair(train_df, test_df, target, n_lags):
-    """
-    Add columns {target}_lag1 .. {target}_lag{n_lags}. n_lags=0 is a
-    no-op.
-    """
-    if n_lags <= 0:
-        return train_df.copy(), test_df.copy(), []
+def _lagged(df, meta, col, lag):
+    """Value of `col` `lag` rows earlier in the same run (NaN at the start of a run)."""
+    return df[col].groupby(meta["run_id"].to_numpy()).shift(lag).to_numpy(dtype=float)
 
-    full = pd.concat([train_df[[target]], test_df[[target]]], ignore_index=True)
-    x = full[target].to_numpy()
-    n = len(train_df)
 
+def add_lag_pair(train_df, test_df, target, n_lags, train_meta, test_meta):
+    """
+    Add columns {target}_lag1 .. {target}_lag{n_lags}, taken inside each
+    run. Rows without a full history are left as NaN; run_one drops them
+    from every frame at once. n_lags=0 is a no-op.
+    """
     tr, te = train_df.copy(), test_df.copy()
     lag_cols = []
-
     for L in range(1, n_lags + 1):
         col = f"{target}_lag{L}"
         lag_cols.append(col)
-
-        lagged = np.empty(len(x), dtype=float)
-        lagged[:L] = np.nan
-        lagged[L:] = x[:-L]
-
-        tr[col] = lagged[:n]
-        te[col] = lagged[n:]
-
-    tr = tr.dropna(subset=lag_cols).reset_index(drop=True)
-    tr[lag_cols] = tr[lag_cols].astype(int)
-
-    for col in lag_cols:
-        te[col] = te[col].clip(upper=int(tr[col].max()))
-    te[lag_cols] = te[lag_cols].astype(int)
-
+        tr[col] = _lagged(train_df, train_meta, target, L)
+        te[col] = _lagged(test_df, test_meta, target, L)
     return tr, te, lag_cols
 
 
-def compute_control_flag(train_raw, test_raw, control_prefixes=("data_quality_",)):
+def compute_control_flag(train_raw, test_raw,
+                         control_prefixes=("cores_", "data_quality_")):
     """
     Returns (train_flag, test_flag, col_name). None, None, None if no
-    matching raw columns exist.
+    matching raw columns exist. Rows are chronological, so the flag is 1 on
+    the first row after a reconfiguration.
     """
     control_cols = [c for c in train_raw.columns
                     if c.lower().startswith(control_prefixes)]
     if not control_cols:
         return None, None, None
 
-    full = pd.concat([train_raw[control_cols], test_raw[control_cols]], ignore_index=True)
-    diffs = full.diff().abs().sum(axis=1)
-    flag = np.array((diffs > 1e-9).astype(int), dtype=int, copy=True)
-    flag[0] = 0
+    def flag(df):
+        diffs = df[control_cols].diff().abs().sum(axis=1)
+        out = np.array((diffs > 1e-9).astype(int), dtype=int, copy=True)
+        out[0] = 0
+        return out
 
-    n = len(train_raw)
-    return flag[:n], flag[n:], "control_changed"
+    return flag(train_raw), flag(test_raw), "control_changed"
 
 
-def add_velocity_features(train_df, test_df, variables, lags=1):
+def add_velocity_features(train_df, test_df, variables, train_meta, test_meta, lags=1):
     """
     For each variable in `variables` (expected: the OTHER
     feature-selected columns in train_df, not the target and not
-    control_changed), adds:
+    control_changed), adds, inside each run:
       {var}_lag1 .. {var}_lag{lags}  (raw past discretized values)
       {var}_vel1 .. {var}_vel{lags}  (discretized velocity:
                                        0=falling, 1=flat, 2=rising)
@@ -1304,43 +1270,23 @@ def add_velocity_features(train_df, test_df, variables, lags=1):
     target_t1 -- see the USE_VELOCITY_FEATURES docstring in the
     config section for the expected scale of this.
 
-    Returns (train_out, test_out, new_cols).
+    Returns (train_out, test_out, new_cols). Rows without history hold NaN.
     """
     variables = [v for v in variables if v in train_df.columns]
-    if not variables:
-        return train_df.copy(), test_df.copy(), []
-
-    full = pd.concat([train_df[variables], test_df[variables]], ignore_index=True)
-    n = len(train_df)
     tr, te = train_df.copy(), test_df.copy()
     new_cols = []
 
     for var in variables:
-        x = full[var].to_numpy(dtype=float)
         for L in range(1, lags + 1):
-            lag_col = f"{var}_lag{L}"
-            lagged = np.empty(len(x), dtype=float)
-            lagged[:L] = np.nan
-            lagged[L:] = x[:-L]
-
-            vel_col = f"{var}_vel{L}"
-            vel_raw = np.empty(len(x), dtype=float)
-            vel_raw[:L] = np.nan
-            vel_raw[L:] = x[L:] - x[:-L]
-            vel_disc = np.where(vel_raw > 0, 2, np.where(vel_raw < 0, 0, 1)).astype(float)
-            vel_disc[:L] = np.nan
-
-            tr[lag_col] = lagged[:n]
-            te[lag_col] = lagged[n:]
-            tr[vel_col] = vel_disc[:n]
-            te[vel_col] = vel_disc[n:]
+            lag_col, vel_col = f"{var}_lag{L}", f"{var}_vel{L}"
+            for out, src, meta in ((tr, train_df, train_meta), (te, test_df, test_meta)):
+                lagged  = _lagged(src, meta, var, L)
+                vel_raw = src[var].to_numpy(dtype=float) - lagged
+                vel     = np.where(vel_raw > 0, 2.0, np.where(vel_raw < 0, 0.0, 1.0))
+                vel[np.isnan(lagged)] = np.nan
+                out[lag_col] = lagged
+                out[vel_col] = vel
             new_cols += [lag_col, vel_col]
-
-    tr = tr.dropna(subset=new_cols).reset_index(drop=True)
-    tr[new_cols] = tr[new_cols].astype(int)
-    for c in new_cols:
-        te[c] = te[c].clip(upper=int(tr[c].max()))
-    te[new_cols] = te[new_cols].astype(int)
 
     return tr, te, new_cols
 
@@ -1348,12 +1294,31 @@ def add_velocity_features(train_df, test_df, variables, lags=1):
 # ============================================================
 # ONE RUN
 # ============================================================
+def _as_levels(train_col, test_col):
+    """Ordinal codes for a column that only takes a few distinct values."""
+    levels = np.unique(train_col.to_numpy(dtype=float))
+
+    def code(col):
+        x = col.to_numpy(dtype=float)
+        idx = np.clip(np.searchsorted(levels, x), 0, len(levels) - 1)
+        left = np.clip(idx - 1, 0, len(levels) - 1)
+        return np.where(np.abs(x - levels[left]) < np.abs(x - levels[idx]), left, idx)
+
+    return code(train_col), code(test_col)
+
+
 def run_one(raw_df, fs_method, disc_method, score_name, k, n_bins,
             train_raw=None, test_raw=None):
     if train_raw is None or test_raw is None:
-        split     = int(TRAIN_FRAC * len(raw_df))
-        train_raw = raw_df.iloc[:split].reset_index(drop=True)
-        test_raw  = raw_df.iloc[split:].reset_index(drop=True)
+        split_run = raw_df["run_id"].quantile(TRAIN_FRAC)
+        train_raw = raw_df[raw_df["run_id"] <= split_run].reset_index(drop=True)
+        test_raw  = raw_df[raw_df["run_id"] > split_run].reset_index(drop=True)
+
+    # bookkeeping (run, position in run) travels next to the data, not in it
+    train_meta = train_raw[D.META_COLS].reset_index(drop=True)
+    test_meta  = test_raw[D.META_COLS].reset_index(drop=True)
+    train_raw  = train_raw[D.feature_cols(train_raw)].reset_index(drop=True)
+    test_raw   = test_raw[D.feature_cols(test_raw)].reset_index(drop=True)
 
     if USE_CONTROL_FLAG:
         train_flag_arr, test_flag_arr, control_col_name = compute_control_flag(
@@ -1373,13 +1338,23 @@ def run_one(raw_df, fs_method, disc_method, score_name, k, n_bins,
     train_fs = drop_constant_cols(train_fs)
     test_fs  = test_fs[train_fs.columns]
 
+    # Columns with a handful of distinct values (cores, data quality) keep one
+    # state per value instead of being spread over n_bins mostly empty bins.
+    level_cols = [c for c in train_fs.columns
+                  if c != TARGET and train_fs[c].nunique() <= max(n_bins, 12)]
+    binned_cols = [c for c in train_fs.columns if c not in level_cols]
+
     disc = Discretizer(
         method=disc_method, n_bins=n_bins,
         dbscan_eps=DBSCAN_EPS, dbscan_min_samples=DBSCAN_MIN_SAMPLES,
     )
-    disc.fit(train_fs, target_col=TARGET)
-    train_ready = disc.transform(train_fs)
-    test_ready  = disc.transform(test_fs)
+    disc.fit(train_fs[binned_cols], target_col=TARGET)
+    train_ready = disc.transform(train_fs[binned_cols])
+    test_ready  = disc.transform(test_fs[binned_cols])
+    for c in level_cols:
+        train_ready[c], test_ready[c] = _as_levels(train_fs[c], test_fs[c])
+    train_ready = train_ready[train_fs.columns].astype(int)
+    test_ready  = test_ready[train_fs.columns].astype(int)
 
     train_ready = drop_constant_cols(train_ready)
     test_ready  = test_ready[train_ready.columns]
@@ -1397,37 +1372,16 @@ def run_one(raw_df, fs_method, disc_method, score_name, k, n_bins,
             test_ready  = test_ready[[c for c in test_ready.columns
                                        if c not in other_thr]]
 
-    (persistence_acc, persistence_f1,
-     persistence_precision, persistence_recall) = persistence_baseline(test_ready, HORIZON)
-
-    print("TRAIN_READY COLS:", train_ready.columns.tolist())
-    print("TRAIN_READY LEN:", len(train_ready))
-    print(f"PERSISTENCE  acc={persistence_acc:.3f} f1={persistence_f1:.3f} "
-          f"prec={persistence_precision:.3f} rec={persistence_recall:.3f}")
-
-    (ar_acc, ar_f1, ar_precision,
-     ar_recall, ar_log_loss) = autoregressive_dbn_baseline(train_ready, test_ready, horizon=HORIZON)
-    print(f"AR-DBN       acc={ar_acc:.3f} f1={ar_f1:.3f} "
-          f"prec={ar_precision:.3f} rec={ar_recall:.3f} "
-          f"log_loss={ar_log_loss:.4f}")
-
-    (si_acc, si_f1, si_precision,
-     si_recall, si_log_loss) = static_bn_inference_baseline(train_ready, test_ready, score_name)
-    print(f"Static BN SI acc={si_acc:.3f} f1={si_f1:.3f} "
-          f"prec={si_precision:.3f} rec={si_recall:.3f} "
-          f"log_loss={si_log_loss:.4f}")
-
     # ---- control flag ----
     train_dbn, test_dbn = train_ready.copy(), test_ready.copy()
     if control_col_name is not None:
         train_dbn[control_col_name] = train_flag_arr
         test_dbn[control_col_name]  = test_flag_arr
-        test_dbn[control_col_name] = test_dbn[control_col_name].clip(
-            upper=int(train_dbn[control_col_name].max())
-        )
 
     # ---- target's own lag memory ----
-    train_dbn, test_dbn, target_lag_cols = add_lag_pair(train_dbn, test_dbn, TARGET, N_LAGS)
+    train_dbn, test_dbn, target_lag_cols = add_lag_pair(
+        train_dbn, test_dbn, TARGET, N_LAGS, train_meta, test_meta
+    )
 
     # ---- velocity features for OTHER feature-selected variables ----
     velocity_cols = []
@@ -1435,28 +1389,71 @@ def run_one(raw_df, fs_method, disc_method, score_name, k, n_bins,
         other_vars = [c for c in train_ready.columns
                       if c != TARGET]
         train_dbn, test_dbn, velocity_cols = add_velocity_features(
-            train_dbn, test_dbn, other_vars, lags=1
+            train_dbn, test_dbn, other_vars, train_meta, test_meta, lags=1
         )
 
     all_lag_cols = target_lag_cols + velocity_cols
     control_col = control_col_name if (control_col_name in train_dbn.columns) else None
+
+    # Rows at the start of a run have no history. Drop them from every frame,
+    # so that the baselines and the DBN are fitted and scored on the same rows.
+    def keep_rows(dbn, ready, meta):
+        ok = dbn.notna().all(axis=1).to_numpy()
+        return (dbn[ok].reset_index(drop=True).astype(int),
+                ready[ok].reset_index(drop=True), meta[ok].reset_index(drop=True))
+
+    train_dbn, train_ready, train_meta = keep_rows(train_dbn, train_ready, train_meta)
+    test_dbn,  test_ready,  test_meta  = keep_rows(test_dbn,  test_ready,  test_meta)
+
+    pairs_train = D.pair_index(train_meta["run_id"], train_meta["pos"], HORIZON, CROSS_RUN_PAIRS)
+    pairs_test  = D.pair_index(test_meta["run_id"],  test_meta["pos"],  HORIZON, CROSS_RUN_PAIRS)
+    exog = [c for c in D.exog_cols(train_ready.columns, EXOG_MODE)]
+
+    (persistence_acc, persistence_f1,
+     persistence_precision, persistence_recall) = persistence_baseline(test_ready, pairs_test)
+
+    print("TRAIN_READY COLS:", train_ready.columns.tolist())
+    print("TRAIN_READY LEN:", len(train_ready),
+          f"| pairs train={len(pairs_train[0])} test={len(pairs_test[0])} "
+          f"(of which configuration changes: {int(pairs_test[2].sum())})")
+    print(f"PERSISTENCE  acc={persistence_acc:.3f} f1={persistence_f1:.3f} "
+          f"prec={persistence_precision:.3f} rec={persistence_recall:.3f}")
+
+    (ar_acc, ar_f1, ar_precision, ar_recall, ar_log_loss,
+     ar_acc_change) = autoregressive_dbn_baseline(train_ready, test_ready,
+                                                  pairs_train, pairs_test)
+    print(f"AR-DBN       acc={ar_acc:.3f} f1={ar_f1:.3f} "
+          f"prec={ar_precision:.3f} rec={ar_recall:.3f} "
+          f"log_loss={ar_log_loss:.4f} acc@change={ar_acc_change:.3f}")
+
+    (si_acc, si_f1, si_precision,
+     si_recall, si_log_loss) = static_bn_inference_baseline(train_ready, test_ready, score_name)
+    print(f"Static BN SI acc={si_acc:.3f} f1={si_f1:.3f} "
+          f"prec={si_precision:.3f} rec={si_recall:.3f} "
+          f"log_loss={si_log_loss:.4f}")
+
+    state_cards = {c: int(max(train_dbn[c].max(), test_dbn[c].max())) + 1
+                   for c in train_dbn.columns}
 
     t_train_start = time.perf_counter()
     model_2s, *_ = build_dbn_model_2s(train_dbn, score_name=score_name,
                                       target=TARGET, lag_cols=all_lag_cols,
                                       control_col=control_col,
                                       target_parents_only=TARGET_PARENTS_ONLY,
-                                      horizon=HORIZON)
+                                      horizon=HORIZON,
+                                      pairs=pairs_train, exog_cols=exog,
+                                      state_cards=state_cards,
+                                      cpt_prior=CPT_PRIOR)
     t_train_end   = time.perf_counter()
     print("PARENTS of target_t1:", sorted(model_2s.get_parents(f"{TARGET}_t1")))
     print(f"TOTAL PARENTS COUNT: {len(model_2s.get_parents(f'{TARGET}_t1'))}")
 
     t_eval_start = time.perf_counter()
-    res          = evaluate(model_2s, test_dbn, horizon=HORIZON)
+    res          = evaluate(model_2s, test_dbn, pairs_test, exog_cols=exog)
     t_eval_end   = time.perf_counter()
 
-    res_legacy_evidence = evaluate(model_2s, test_ready,
-                                    evidence_mode="full_no_target", horizon=HORIZON)
+    res_legacy_evidence = evaluate(model_2s, test_ready, pairs_test,
+                                    evidence_mode="full_no_target")
 
     train_time_sec = t_train_end - t_train_start
     eval_time_sec  = t_eval_end  - t_eval_start
@@ -1466,7 +1463,8 @@ def run_one(raw_df, fs_method, disc_method, score_name, k, n_bins,
           f"({100*res['cache_hits']/max(res['n_queries'],1):.1f}%) "
           f"unique evidence combos={res['cache_size']}")
     print(f"DBN (corrected evidence)  acc={res['accuracy']:.3f} "
-          f"f1={res['f1']:.3f} log_loss={res['log_loss']:.4f}")
+          f"f1={res['f1']:.3f} log_loss={res['log_loss']:.4f} "
+          f"acc@change={res['accuracy_change']:.3f} (n={res['n_change']})")
     print(f"DBN (legacy/no-target ev) acc={res_legacy_evidence['accuracy']:.3f} "
           f"f1={res_legacy_evidence['f1']:.3f} "
           f"log_loss={res_legacy_evidence['log_loss']:.4f}")
@@ -1477,7 +1475,8 @@ def run_one(raw_df, fs_method, disc_method, score_name, k, n_bins,
         t1_node = f"{eval_tgt}_t1"
         if t1_node in model_nodes and eval_tgt in test_ready.columns:
             try:
-                r = evaluate(model_2s, test_dbn, target_override=eval_tgt, horizon=HORIZON)
+                r = evaluate(model_2s, test_dbn, pairs_test,
+                             target_override=eval_tgt, exog_cols=exog)
                 all_tput_results[eval_tgt] = r
                 print(f"  [{eval_tgt}] acc={r['accuracy']:.3f} "
                       f"f1={r['f1']:.3f} prec={r['precision']:.3f} "
@@ -1490,6 +1489,8 @@ def run_one(raw_df, fs_method, disc_method, score_name, k, n_bins,
             all_tput_results[eval_tgt] = None
 
     cols_used = list(train_ready.columns)
+    res["ar_accuracy_change"] = ar_acc_change
+    res["target_parents"] = sorted(model_2s.get_parents(f"{TARGET}_t1"))
 
     del train_raw, test_raw, train_fs, test_fs, disc
     gc.collect()
@@ -1529,13 +1530,14 @@ def main():
         if MAX_ROWS is not None:
             raw = raw.iloc[:MAX_ROWS].reset_index(drop=True)
 
-        print(f"[DATA] rows after aggregation: {len(raw)}")
+        print(f"[DATA] rows after aggregation: {len(raw)} "
+              f"({raw['run_id'].nunique()} runs, {MODELING_GRANULARITY_SEC}s per row)")
 
         folds   = make_temporal_folds(raw, k=K_FOLDS)
         tracker = BestPerBinsTracker(target=TARGET)
         rows    = []
 
-        print(f"[FOLDS] Using {K_FOLDS}-fold expanding window temporal CV")
+        print(f"[FOLDS] Using {K_FOLDS}-fold {CV_SCHEME} temporal CV, split at run boundaries")
         for fi, (tr, te) in enumerate(folds):
             print(f"  Fold {fi+1}/{K_FOLDS}: "
                   f"train={len(tr)} rows, test={len(te)} rows")
@@ -1586,6 +1588,9 @@ def main():
                                         "precision":          res["precision"],
                                         "recall":             res["recall"],
                                         "log_loss":           res["log_loss"],
+                                        "accuracy_change":    res["accuracy_change"],
+                                        "ar_acc_change":      res["ar_accuracy_change"],
+                                        "target_parents":     res["target_parents"],
                                         "legacy_accuracy":    res_legacy_evidence["accuracy"],
                                         "legacy_f1":          res_legacy_evidence["f1"],
                                         "legacy_precision":   res_legacy_evidence["precision"],
@@ -1642,6 +1647,8 @@ def main():
                                         "accuracy": np.nan, "f1": np.nan,
                                         "precision": np.nan, "recall": np.nan,
                                         "log_loss": np.nan,
+                                        "accuracy_change": np.nan, "ar_acc_change": np.nan,
+                                        "target_parents": [],
                                         "legacy_accuracy": np.nan, "legacy_f1": np.nan,
                                         "legacy_precision": np.nan, "legacy_recall": np.nan,
                                         "legacy_log_loss": np.nan,
@@ -1721,6 +1728,9 @@ def main():
                                 "recall_std":                _std("recall"),
                                 "log_loss":                  _mean("log_loss"),
                                 "log_loss_std":              _std("log_loss"),
+                                "accuracy_at_change":        _mean("accuracy_change"),
+                                "ar_dbn_accuracy_at_change": _mean("ar_acc_change"),
+                                "target_parents_last_fold":  ",".join(ok_folds[-1]["target_parents"]) if ok_folds else "",
                                 "dbn_legacy_evidence_accuracy":      _mean("legacy_accuracy"),
                                 "dbn_legacy_evidence_accuracy_std":  _std("legacy_accuracy"),
                                 "dbn_legacy_evidence_f1":            _mean("legacy_f1"),
@@ -1777,6 +1787,11 @@ def main():
                                 "use_control_flag":           USE_CONTROL_FLAG,
                                 "use_velocity_features":      USE_VELOCITY_FEATURES,
                                 "horizon":                    HORIZON,
+                                "exog_mode":                  EXOG_MODE,
+                                "target_parents_mode":        str(TARGET_PARENTS_ONLY),
+                                "cross_run_pairs":            CROSS_RUN_PAIRS,
+                                "cv_scheme":                  CV_SCHEME,
+                                "cpt_prior":                  CPT_PRIOR,
                                 "error":                     error_str,
                                 "acc_tput1":  _mean_tput("throughput_1", "accuracy"),
                                 "acc_tput2":  _mean_tput("throughput_2", "accuracy"),

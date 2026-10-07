@@ -11,7 +11,7 @@ Varied: N_LAGS, USE_CONTROL_FLAG, USE_VELOCITY_FEATURES.
 
 Usage:
   python dbn/memory_ablation.py --csv data/dbn_wide_XXXX.csv
-  python dbn/memory_ablation.py --csv ... --n_bins 6 8 --horizon 3
+  python dbn/memory_ablation.py --csv ... --n_bins 10 20 --horizon 3 --granularity 30
 """
 import argparse
 import contextlib
@@ -140,11 +140,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", required=True)
     ap.add_argument("--pipeline_module", default="dbn_sweep")
-    ap.add_argument("--n_bins", type=int, nargs="+", default=[6])
+    ap.add_argument("--n_bins", type=int, nargs="+", default=[20])
     ap.add_argument("--disc", default="classic_uniform")
     ap.add_argument("--score", default="bic")
     ap.add_argument("--k", type=int, default=4)
     ap.add_argument("--horizon", type=int, default=1)
+    ap.add_argument("--granularity", type=int, default=1, help="seconds per row")
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
@@ -152,7 +153,11 @@ def main():
     P = import_pipeline(args.pipeline_module, args.csv)
     P.TARGET = TARGET
     P.HORIZON = args.horizon
-    P.TARGET_PARENTS_ONLY = True
+    # Memory is the only thing varied here: the target's parents are its own
+    # history (+ flag / velocities), with no exogenous inputs.
+    P.TARGET_PARENTS_ONLY = "ar_only"
+    P.EXOG_MODE = "none"
+    P.MODELING_GRANULARITY_SEC = args.granularity
 
     raw = P.load_and_clean(args.csv, TARGET)
     raw = P.aggregate_to_modeling_granularity(raw)
