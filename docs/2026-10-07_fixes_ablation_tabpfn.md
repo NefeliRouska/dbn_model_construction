@@ -168,6 +168,8 @@ accuracy in brackets.
 | 50 | **+0.056** (0.806) | +0.011 (0.809) | +0.012 (0.792) | +0.019 (0.705) |
 | 100 | **+0.092** (0.697) | | | |
 
+![Bins and granularity](figures/bins_and_granularity.png)
+
 - AR does fall as bins increase: 0.988 → 0.697 at 1 s.
 - With 4 or 6 bins there is nothing to gain at any granularity: a load change
   of 5–15 requests/s almost never crosses a bin 80–125 requests/s wide.

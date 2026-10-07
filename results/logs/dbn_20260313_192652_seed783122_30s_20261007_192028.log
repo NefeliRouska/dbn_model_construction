@@ -1,0 +1,1590 @@
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/pgmpy/utils/utils.py:4: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+[RUN] code version (git): 28a89a1
+
+==============================
+ TARGET = throughput_3
+==============================
+
+[VARIANCE FILTER] Dropped 32 near-constant columns: ['process_max_fds_1', 'process_max_fds_2', 'process_max_fds_3', 'process_open_fds_1', 'process_open_fds_3', 'python_gc_objects_uncollectable_rate_1', 'python_gc_objects_uncollectable_rate_2', 'python_gc_objects_uncollectable_rate_3', 'python_gc_objects_uncollectable_rate_4', 'python_gc_objects_uncollectable_rate_5', 'python_gc_objects_uncollectable_rate_6', 'python_gc_objects_uncollectable_rate_7', 'python_gc_objects_uncollectable_rate_8', 'python_gc_objects_uncollectable_rate_9', 'python_info_1', 'python_info_2', 'python_info_3', 'scrape_duration_seconds_1', 'scrape_duration_seconds_2', 'scrape_duration_seconds_3', 'scrape_samples_post_metric_relabeling_1', 'scrape_samples_post_metric_relabeling_2', 'scrape_samples_post_metric_relabeling_3', 'scrape_samples_scraped_1', 'scrape_samples_scraped_2', 'scrape_samples_scraped_3', 'scrape_series_added_1', 'scrape_series_added_2', 'scrape_series_added_3', 'up_1', 'up_2', 'up_3']
+[DATA] rows after aggregation: 6720 (560 runs, 30s per row)
+[FOLDS] Using 5-fold expanding temporal CV, split at run boundaries
+  Fold 1/5: train=1116 rows, test=1128 rows
+  Fold 2/5: train=2244 rows, test=1116 rows
+  Fold 3/5: train=3360 rows, test=1116 rows
+  Fold 4/5: train=4476 rows, test=1128 rows
+  Fold 5/5: train=5604 rows, test=1116 rows
+[START] target=throughput_3 K=4 n_bins=   4 fs=markov disc=classic_uniform score=bic
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'data_quality_3', 'process_cpu_seconds_rate_2', 'throughput_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.924 f1=0.896 prec=0.895 rec=0.897
+AR-DBN       acc=0.924 f1=0.896 prec=0.895 rec=0.897 log_loss=0.3306 acc@change=0.000
+Static BN SI acc=0.876 f1=0.830 prec=0.806 rec=0.889 log_loss=0.4358
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.23s  EVAL TIME: 0.00s
+CACHE hits=1123 / 1127 queries (99.6%) unique evidence combos=4
+DBN (corrected evidence)  acc=0.924 f1=0.896 log_loss=0.3306 acc@change=0.000 (n=86)
+DBN (legacy/no-target ev) acc=0.815 f1=0.757 log_loss=0.6192
+  [throughput_1] acc=0.580 f1=0.462 prec=0.503 rec=0.477 log_loss=1.0087
+  [throughput_2] acc=0.834 f1=0.696 prec=0.830 rec=0.675 log_loss=0.4787
+  [throughput_3] acc=0.924 f1=0.896 prec=0.895 rec=0.897 log_loss=0.3306
+  [fold 1/5] acc=0.924 f1=0.896 ll=0.3306 (legacy-ev acc=0.815)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['data_quality_3', 'avg_p_latency_3', 'python_gc_collections_rate_3', 'throughput_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.924 f1=0.884 prec=0.884 rec=0.884
+AR-DBN       acc=0.924 f1=0.884 prec=0.884 rec=0.884 log_loss=0.3282 acc@change=0.000
+Static BN SI acc=0.909 f1=0.883 prec=0.892 rec=0.883 log_loss=0.2228
+PARENTS of target_t1: ['python_gc_collections_rate_3_t', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.27s  EVAL TIME: 0.01s
+CACHE hits=1091 / 1115 queries (97.8%) unique evidence combos=24
+DBN (corrected evidence)  acc=0.924 f1=0.884 log_loss=0.3117 acc@change=0.000 (n=85)
+DBN (legacy/no-target ev) acc=0.840 f1=0.804 log_loss=0.4293
+  [throughput_1] acc=0.707 f1=0.635 prec=0.637 rec=0.657 log_loss=0.5095
+  [throughput_2] acc=0.846 f1=0.661 prec=0.665 rec=0.665 log_loss=0.4650
+  [throughput_3] acc=0.924 f1=0.884 prec=0.884 rec=0.884 log_loss=0.3117
+  [fold 2/5] acc=0.924 f1=0.884 ll=0.3117 (legacy-ev acc=0.840)
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'data_quality_3', 'throughput_2', 'throughput_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.916 f1=0.876 prec=0.876 rec=0.876
+AR-DBN       acc=0.916 f1=0.876 prec=0.876 rec=0.876 log_loss=0.3513 acc@change=0.000
+Static BN SI acc=0.975 f1=0.971 prec=0.985 rec=0.958 log_loss=0.1093
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.21s  EVAL TIME: 0.00s
+CACHE hits=1111 / 1115 queries (99.6%) unique evidence combos=4
+DBN (corrected evidence)  acc=0.916 f1=0.876 log_loss=0.3513 acc@change=0.000 (n=94)
+DBN (legacy/no-target ev) acc=0.766 f1=0.594 log_loss=0.6614
+  [throughput_1] acc=0.693 f1=0.580 prec=0.619 rec=0.583 log_loss=0.6049
+  [throughput_2] acc=0.899 f1=0.845 prec=0.860 rec=0.834 log_loss=0.4104
+  [throughput_3] acc=0.916 f1=0.876 prec=0.876 rec=0.876 log_loss=0.3513
+  [fold 3/5] acc=0.916 f1=0.876 ll=0.3513 (legacy-ev acc=0.766)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['data_quality_3', 'python_gc_collections_rate_2', 'python_gc_collections_rate_3', 'throughput_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.935 f1=0.897 prec=0.897 rec=0.897
+AR-DBN       acc=0.935 f1=0.897 prec=0.897 rec=0.897 log_loss=0.2949 acc@change=0.000
+Static BN SI acc=0.926 f1=0.903 prec=0.952 rec=0.867 log_loss=0.2242
+PARENTS of target_t1: ['data_quality_1_t1', 'python_gc_collections_rate_3_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.37s  EVAL TIME: 0.01s
+CACHE hits=1071 / 1127 queries (95.0%) unique evidence combos=56
+DBN (corrected evidence)  acc=0.939 f1=0.896 log_loss=0.2285 acc@change=0.055 (n=73)
+DBN (legacy/no-target ev) acc=0.834 f1=0.630 log_loss=0.5767
+  [throughput_1] acc=0.760 f1=0.724 prec=0.765 rec=0.750 log_loss=0.5774
+  [throughput_2] acc=0.839 f1=0.779 prec=0.781 rec=0.800 log_loss=0.7117
+  [throughput_3] acc=0.939 f1=0.896 prec=0.892 rec=0.901 log_loss=0.2285
+  [fold 4/5] acc=0.939 f1=0.896 ll=0.2285 (legacy-ev acc=0.834)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['data_quality_3', 'process_cpu_seconds_rate_3', 'python_gc_collections_rate_3', 'throughput_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.935 f1=0.895 prec=0.895 rec=0.895
+AR-DBN       acc=0.935 f1=0.895 prec=0.895 rec=0.895 log_loss=0.2902 acc@change=0.000
+Static BN SI acc=0.976 f1=0.946 prec=0.979 rec=0.922 log_loss=0.0860
+PARENTS of target_t1: ['data_quality_1_t1', 'python_gc_collections_rate_3_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.45s  EVAL TIME: 0.01s
+CACHE hits=1066 / 1115 queries (95.6%) unique evidence combos=49
+DBN (corrected evidence)  acc=0.942 f1=0.898 log_loss=0.2174 acc@change=0.110 (n=73)
+DBN (legacy/no-target ev) acc=0.880 f1=0.682 log_loss=0.4195
+  [throughput_1] acc=0.755 f1=0.647 prec=0.682 rec=0.660 log_loss=0.4476
+  [throughput_2] acc=0.823 f1=0.649 prec=0.648 rec=0.653 log_loss=0.4076
+  [throughput_3] acc=0.942 f1=0.898 prec=0.892 rec=0.904 log_loss=0.2174
+  [fold 5/5] acc=0.942 f1=0.898 ll=0.2174 (legacy-ev acc=0.880)
+[OK] target=throughput_3 K= 4 n_bins=   4 fs=markov disc=classic_uniform score=bic folds=5/5 total=16.2s | acc=0.929±0.011 | f1=0.890±0.010 | ll=0.2879±0.0611 | legacy_acc=0.827 | ar_acc=0.927 | si_acc=0.933 | mb=4 fb=none
+[START] target=throughput_3 K=4 n_bins=  10 fs=markov disc=classic_uniform score=bic
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'process_cpu_seconds_rate_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.862 f1=0.805 prec=0.802 rec=0.808
+AR-DBN       acc=0.854 f1=0.731 prec=0.727 rec=0.735 log_loss=0.6652 acc@change=0.000
+Static BN SI acc=0.849 f1=0.795 prec=0.836 rec=0.796 log_loss=0.6211
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.20s  EVAL TIME: 0.01s
+CACHE hits=1117 / 1127 queries (99.1%) unique evidence combos=10
+DBN (corrected evidence)  acc=0.854 f1=0.731 log_loss=0.6652 acc@change=0.000 (n=156)
+DBN (legacy/no-target ev) acc=0.569 f1=0.411 log_loss=1.1966
+  [throughput_1] acc=0.351 f1=0.211 prec=0.194 rec=0.244 log_loss=2.2409
+  [throughput_2] acc=0.764 f1=0.647 prec=0.684 rec=0.631 log_loss=0.7878
+  [throughput_3] acc=0.854 f1=0.731 prec=0.727 rec=0.735 log_loss=0.6652
+  [fold 1/5] acc=0.854 f1=0.731 ll=0.6652 (legacy-ev acc=0.569)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.868 f1=0.800 prec=0.801 rec=0.800
+AR-DBN       acc=0.868 f1=0.800 prec=0.801 rec=0.800 log_loss=0.6158 acc@change=0.000
+Static BN SI acc=0.836 f1=0.738 prec=0.793 rec=0.748 log_loss=0.6717
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.23s  EVAL TIME: 0.01s
+CACHE hits=1069 / 1115 queries (95.9%) unique evidence combos=46
+DBN (corrected evidence)  acc=0.868 f1=0.800 log_loss=0.6115 acc@change=0.000 (n=147)
+DBN (legacy/no-target ev) acc=0.665 f1=0.481 log_loss=1.0174
+  [throughput_1] acc=0.606 f1=0.456 prec=0.450 rec=0.475 log_loss=1.1808
+  [throughput_2] acc=0.840 f1=0.756 prec=0.787 rec=0.758 log_loss=0.6521
+  [throughput_3] acc=0.868 f1=0.800 prec=0.801 rec=0.800 log_loss=0.6115
+  [fold 2/5] acc=0.868 f1=0.800 ll=0.6115 (legacy-ev acc=0.665)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.867 f1=0.718 prec=0.718 rec=0.718
+AR-DBN       acc=0.867 f1=0.718 prec=0.718 rec=0.718 log_loss=0.6154 acc@change=0.000
+Static BN SI acc=0.854 f1=0.766 prec=0.748 rec=0.807 log_loss=0.4763
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.24s  EVAL TIME: 0.01s
+CACHE hits=1083 / 1115 queries (97.1%) unique evidence combos=32
+DBN (corrected evidence)  acc=0.867 f1=0.718 log_loss=0.6145 acc@change=0.000 (n=148)
+DBN (legacy/no-target ev) acc=0.703 f1=0.479 log_loss=0.9746
+  [throughput_1] acc=0.646 f1=0.484 prec=0.538 rec=0.494 log_loss=1.0906
+  [throughput_2] acc=0.855 f1=0.666 prec=0.699 rec=0.644 log_loss=0.6171
+  [throughput_3] acc=0.867 f1=0.718 prec=0.718 rec=0.718 log_loss=0.6145
+  [fold 3/5] acc=0.867 f1=0.718 ll=0.6145 (legacy-ev acc=0.703)
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'buffer_size_3', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.894 f1=0.809 prec=0.809 rec=0.809
+AR-DBN       acc=0.894 f1=0.809 prec=0.809 rec=0.809 log_loss=0.5447 acc@change=0.000
+Static BN SI acc=0.872 f1=0.780 prec=0.792 rec=0.779 log_loss=0.7505
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.27s  EVAL TIME: 0.00s
+CACHE hits=1118 / 1127 queries (99.2%) unique evidence combos=9
+DBN (corrected evidence)  acc=0.894 f1=0.809 log_loss=0.5447 acc@change=0.000 (n=120)
+DBN (legacy/no-target ev) acc=0.295 f1=0.051 log_loss=1.9373
+  [throughput_1] acc=0.618 f1=0.492 prec=0.544 rec=0.501 log_loss=1.4526
+  [throughput_2] acc=0.847 f1=0.709 prec=0.745 rec=0.695 log_loss=0.6481
+  [throughput_3] acc=0.894 f1=0.809 prec=0.809 rec=0.809 log_loss=0.5447
+  [fold 4/5] acc=0.894 f1=0.809 ll=0.5447 (legacy-ev acc=0.295)
+TRAIN_READY COLS: ['data_quality_3', 'process_cpu_seconds_rate_3', 'throughput_2', 'throughput_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.891 f1=0.758 prec=0.758 rec=0.758
+AR-DBN       acc=0.891 f1=0.758 prec=0.758 rec=0.758 log_loss=0.5136 acc@change=0.000
+Static BN SI acc=0.922 f1=0.809 prec=0.801 rec=0.818 log_loss=0.2978
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.21s  EVAL TIME: 0.00s
+CACHE hits=1106 / 1115 queries (99.2%) unique evidence combos=9
+DBN (corrected evidence)  acc=0.891 f1=0.758 log_loss=0.5136 acc@change=0.000 (n=121)
+DBN (legacy/no-target ev) acc=0.500 f1=0.336 log_loss=1.3073
+  [throughput_1] acc=0.909 f1=0.879 prec=0.887 rec=0.874 log_loss=0.4077
+  [throughput_2] acc=0.877 f1=0.714 prec=0.727 rec=0.709 log_loss=0.5101
+  [throughput_3] acc=0.891 f1=0.758 prec=0.758 rec=0.758 log_loss=0.5136
+  [fold 5/5] acc=0.891 f1=0.758 ll=0.5136 (legacy-ev acc=0.500)
+[OK] target=throughput_3 K= 4 n_bins=  10 fs=markov disc=classic_uniform score=bic folds=5/5 total=14.6s | acc=0.875±0.017 | f1=0.763±0.040 | ll=0.5899±0.0605 | legacy_acc=0.547 | ar_acc=0.875 | si_acc=0.867 | mb=3 fb=padded
+[START] target=throughput_3 K=4 n_bins=  20 fs=markov disc=classic_uniform score=bic
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'process_cpu_seconds_rate_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.801 f1=0.611 prec=0.609 rec=0.613
+AR-DBN       acc=0.795 f1=0.570 prec=0.560 rec=0.584 log_loss=1.0125 acc@change=0.004
+Static BN SI acc=0.818 f1=0.647 prec=0.637 rec=0.668 log_loss=1.0189
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.20s  EVAL TIME: 0.00s
+CACHE hits=1108 / 1127 queries (98.3%) unique evidence combos=19
+DBN (corrected evidence)  acc=0.795 f1=0.570 log_loss=1.0125 acc@change=0.004 (n=224)
+DBN (legacy/no-target ev) acc=0.465 f1=0.317 log_loss=1.5717
+  [throughput_1] acc=0.289 f1=0.119 prec=0.097 rec=0.194 log_loss=2.8974
+  [throughput_2] acc=0.642 f1=0.521 prec=0.608 rec=0.496 log_loss=1.7511
+  [throughput_3] acc=0.795 f1=0.570 prec=0.560 rec=0.584 log_loss=1.0125
+  [fold 1/5] acc=0.795 f1=0.570 ll=1.0125 (legacy-ev acc=0.465)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['python_gc_collections_rate_3', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.816 f1=0.586 prec=0.586 rec=0.586
+AR-DBN       acc=0.810 f1=0.542 prec=0.537 rec=0.548 log_loss=0.9604 acc@change=0.005
+Static BN SI acc=0.785 f1=0.607 prec=0.629 rec=0.620 log_loss=0.9762
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.21s  EVAL TIME: 0.01s
+CACHE hits=1035 / 1115 queries (92.8%) unique evidence combos=80
+DBN (corrected evidence)  acc=0.813 f1=0.543 log_loss=1.0065 acc@change=0.020 (n=205)
+DBN (legacy/no-target ev) acc=0.582 f1=0.373 log_loss=1.3217
+  [throughput_1] acc=0.335 f1=0.139 prec=0.112 rec=0.242 log_loss=2.1224
+  [throughput_2] acc=0.402 f1=0.130 prec=0.117 rec=0.164 log_loss=1.9470
+  [throughput_3] acc=0.813 f1=0.543 prec=0.537 rec=0.549 log_loss=1.0065
+  [fold 2/5] acc=0.813 f1=0.543 ll=1.0065 (legacy-ev acc=0.582)
+TRAIN_READY COLS: ['python_gc_collections_rate_3', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.816 f1=0.586 prec=0.587 rec=0.586
+AR-DBN       acc=0.815 f1=0.548 prec=0.547 rec=0.549 log_loss=0.8819 acc@change=0.005
+Static BN SI acc=0.838 f1=0.674 prec=0.664 rec=0.692 log_loss=0.6711
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.23s  EVAL TIME: 0.00s
+CACHE hits=1095 / 1115 queries (98.2%) unique evidence combos=20
+DBN (corrected evidence)  acc=0.815 f1=0.548 log_loss=0.8819 acc@change=0.005 (n=205)
+DBN (legacy/no-target ev) acc=0.570 f1=0.295 log_loss=1.3292
+  [throughput_1] acc=0.303 f1=0.115 prec=0.094 rec=0.193 log_loss=2.2034
+  [throughput_2] acc=0.315 f1=0.222 prec=0.209 rec=0.258 log_loss=2.2279
+  [throughput_3] acc=0.815 f1=0.548 prec=0.547 rec=0.549 log_loss=0.8819
+  [fold 3/5] acc=0.815 f1=0.548 ll=0.8819 (legacy-ev acc=0.570)
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'buffer_size_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.856 f1=0.736 prec=0.736 rec=0.736
+AR-DBN       acc=0.856 f1=0.736 prec=0.736 rec=0.736 log_loss=0.7720 acc@change=0.000
+Static BN SI acc=0.884 f1=0.776 prec=0.805 rec=0.770 log_loss=0.8691
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.25s  EVAL TIME: 0.00s
+CACHE hits=1110 / 1127 queries (98.5%) unique evidence combos=17
+DBN (corrected evidence)  acc=0.856 f1=0.736 log_loss=0.7720 acc@change=0.000 (n=162)
+DBN (legacy/no-target ev) acc=0.508 f1=0.338 log_loss=1.3694
+  [throughput_1] acc=0.546 f1=0.420 prec=0.436 rec=0.452 log_loss=1.8794
+  [throughput_2] acc=0.754 f1=0.537 prec=0.572 rec=0.524 log_loss=1.0730
+  [throughput_3] acc=0.856 f1=0.736 prec=0.736 rec=0.736 log_loss=0.7720
+  [fold 4/5] acc=0.856 f1=0.736 ll=0.7720 (legacy-ev acc=0.508)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'buffer_size_3', 'python_gc_collections_rate_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.843 f1=0.690 prec=0.690 rec=0.690
+AR-DBN       acc=0.844 f1=0.691 prec=0.690 rec=0.691 log_loss=0.7422 acc@change=0.006
+Static BN SI acc=0.845 f1=0.736 prec=0.758 rec=0.735 log_loss=0.6210
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.26s  EVAL TIME: 0.01s
+CACHE hits=1059 / 1115 queries (95.0%) unique evidence combos=56
+DBN (corrected evidence)  acc=0.846 f1=0.693 log_loss=0.7325 acc@change=0.017 (n=175)
+DBN (legacy/no-target ev) acc=0.665 f1=0.477 log_loss=1.1303
+  [throughput_1] acc=0.674 f1=0.476 prec=0.516 rec=0.509 log_loss=1.0357
+  [throughput_2] acc=0.789 f1=0.566 prec=0.602 rec=0.566 log_loss=0.9704
+  [throughput_3] acc=0.846 f1=0.693 prec=0.694 rec=0.692 log_loss=0.7325
+  [fold 5/5] acc=0.846 f1=0.693 ll=0.7325 (legacy-ev acc=0.665)
+[OK] target=throughput_3 K= 4 n_bins=  20 fs=markov disc=classic_uniform score=bic folds=5/5 total=14.2s | acc=0.825±0.025 | f1=0.618±0.090 | ll=0.8811±0.1294 | legacy_acc=0.558 | ar_acc=0.824 | si_acc=0.834 | mb=1 fb=padded
+[START] target=throughput_3 K=4 n_bins=   4 fs=markov disc=classic_uniform score=aic
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'process_cpu_seconds_rate_2', 'python_gc_collections_rate_6', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.924 f1=0.896 prec=0.895 rec=0.897
+AR-DBN       acc=0.924 f1=0.896 prec=0.895 rec=0.897 log_loss=0.3306 acc@change=0.000
+Static BN SI acc=0.838 f1=0.739 prec=0.762 rec=0.781 log_loss=0.5862
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.68s  EVAL TIME: 0.01s
+CACHE hits=1074 / 1127 queries (95.3%) unique evidence combos=53
+DBN (corrected evidence)  acc=0.924 f1=0.896 log_loss=0.2760 acc@change=0.000 (n=86)
+DBN (legacy/no-target ev) acc=0.681 f1=0.434 log_loss=0.7730
+  [throughput_1] acc=0.580 f1=0.462 prec=0.503 rec=0.477 log_loss=1.0087
+  [throughput_2] acc=0.648 f1=0.334 prec=0.325 rec=0.358 log_loss=1.1391
+  [throughput_3] acc=0.924 f1=0.896 prec=0.895 rec=0.897 log_loss=0.2760
+  [fold 1/5] acc=0.924 f1=0.896 ll=0.2760 (legacy-ev acc=0.681)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'process_cpu_seconds_rate_3', 'process_cpu_seconds_rate_2', 'python_gc_collections_rate_6', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.924 f1=0.884 prec=0.884 rec=0.884
+AR-DBN       acc=0.924 f1=0.884 prec=0.884 rec=0.884 log_loss=0.3282 acc@change=0.000
+Static BN SI acc=0.840 f1=0.683 prec=0.689 rec=0.687 log_loss=0.5209
+PARENTS of target_t1: ['data_quality_1_t1', 'rps_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.86s  EVAL TIME: 0.01s
+CACHE hits=1025 / 1115 queries (91.9%) unique evidence combos=90
+DBN (corrected evidence)  acc=0.924 f1=0.884 log_loss=0.2791 acc@change=0.000 (n=85)
+DBN (legacy/no-target ev) acc=0.797 f1=0.572 log_loss=0.6474
+  [throughput_1] acc=0.886 f1=0.867 prec=0.914 rec=0.840 log_loss=0.3107
+  [throughput_2] acc=0.845 f1=0.717 prec=0.735 rec=0.755 log_loss=0.4923
+  [throughput_3] acc=0.924 f1=0.884 prec=0.884 rec=0.884 log_loss=0.2791
+  [fold 2/5] acc=0.924 f1=0.884 ll=0.2791 (legacy-ev acc=0.797)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'data_quality_3', 'process_cpu_seconds_rate_3', 'throughput_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.916 f1=0.876 prec=0.876 rec=0.876
+AR-DBN       acc=0.916 f1=0.876 prec=0.876 rec=0.876 log_loss=0.3513 acc@change=0.000
+Static BN SI acc=0.972 f1=0.965 prec=0.977 rec=0.954 log_loss=0.1432
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_1_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 1.02s  EVAL TIME: 0.01s
+CACHE hits=1036 / 1115 queries (92.9%) unique evidence combos=79
+DBN (corrected evidence)  acc=0.917 f1=0.877 log_loss=0.2693 acc@change=0.021 (n=94)
+DBN (legacy/no-target ev) acc=0.752 f1=0.599 log_loss=0.6596
+  [throughput_1] acc=0.787 f1=0.756 prec=0.864 rec=0.711 log_loss=0.4705
+  [throughput_2] acc=0.857 f1=0.815 prec=0.853 rec=0.793 log_loss=0.6046
+  [throughput_3] acc=0.917 f1=0.877 prec=0.876 rec=0.878 log_loss=0.2693
+  [fold 3/5] acc=0.917 f1=0.877 ll=0.2693 (legacy-ev acc=0.752)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'process_cpu_seconds_rate_3', 'process_cpu_seconds_rate_2', 'python_gc_collections_rate_6', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.935 f1=0.897 prec=0.897 rec=0.897
+AR-DBN       acc=0.935 f1=0.897 prec=0.897 rec=0.897 log_loss=0.2949 acc@change=0.000
+Static BN SI acc=0.931 f1=0.909 prec=0.960 rec=0.871 log_loss=0.1917
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 1.14s  EVAL TIME: 0.01s
+CACHE hits=1076 / 1127 queries (95.5%) unique evidence combos=51
+DBN (corrected evidence)  acc=0.938 f1=0.895 log_loss=0.2365 acc@change=0.041 (n=73)
+DBN (legacy/no-target ev) acc=0.773 f1=0.441 log_loss=0.5819
+  [throughput_1] acc=0.935 f1=0.920 prec=0.938 rec=0.908 log_loss=0.1802
+  [throughput_2] acc=0.791 f1=0.587 prec=0.588 rec=0.586 log_loss=1.0252
+  [throughput_3] acc=0.938 f1=0.895 prec=0.891 rec=0.900 log_loss=0.2365
+  [fold 4/5] acc=0.938 f1=0.895 ll=0.2365 (legacy-ev acc=0.773)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'python_gc_collections_rate_3', 'process_cpu_seconds_rate_3', 'process_cpu_seconds_rate_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.935 f1=0.895 prec=0.895 rec=0.895
+AR-DBN       acc=0.935 f1=0.895 prec=0.895 rec=0.895 log_loss=0.2902 acc@change=0.000
+Static BN SI acc=0.982 f1=0.982 prec=0.979 rec=0.986 log_loss=0.0676
+PARENTS of target_t1: ['data_quality_1_t1', 'python_gc_collections_rate_3_t', 'throughput_1_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 4
+TRAIN TIME: 2.05s  EVAL TIME: 0.02s
+CACHE hits=1035 / 1115 queries (92.8%) unique evidence combos=80
+DBN (corrected evidence)  acc=0.939 f1=0.897 log_loss=0.2224 acc@change=0.068 (n=73)
+DBN (legacy/no-target ev) acc=0.900 f1=0.864 log_loss=0.3927
+  [throughput_1] acc=0.950 f1=0.943 prec=0.952 rec=0.939 log_loss=0.1528
+  [throughput_2] acc=0.847 f1=0.757 prec=0.814 rec=0.724 log_loss=0.6959
+  [throughput_3] acc=0.939 f1=0.897 prec=0.896 rec=0.898 log_loss=0.2224
+  [fold 5/5] acc=0.939 f1=0.897 ll=0.2224 (legacy-ev acc=0.900)
+[OK] target=throughput_3 K= 4 n_bins=   4 fs=markov disc=classic_uniform score=aic folds=5/5 total=40.3s | acc=0.928±0.010 | f1=0.890±0.009 | ll=0.2566±0.0256 | legacy_acc=0.780 | ar_acc=0.927 | si_acc=0.913 | mb=8 fb=trimmed
+[START] target=throughput_3 K=4 n_bins=  10 fs=markov disc=classic_uniform score=aic
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'data_quality_3', 'process_cpu_seconds_rate_3', 'throughput_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.862 f1=0.805 prec=0.802 rec=0.808
+AR-DBN       acc=0.854 f1=0.731 prec=0.727 rec=0.735 log_loss=0.6652 acc@change=0.000
+Static BN SI acc=0.882 f1=0.848 prec=0.895 rec=0.850 log_loss=0.4493
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.42s  EVAL TIME: 0.00s
+CACHE hits=1117 / 1127 queries (99.1%) unique evidence combos=10
+DBN (corrected evidence)  acc=0.854 f1=0.731 log_loss=0.6652 acc@change=0.000 (n=156)
+DBN (legacy/no-target ev) acc=0.683 f1=0.542 log_loss=0.9574
+  [throughput_1] acc=0.492 f1=0.379 prec=0.453 rec=0.379 log_loss=1.7611
+  [throughput_2] acc=0.653 f1=0.418 prec=0.551 rec=0.392 log_loss=1.4133
+  [throughput_3] acc=0.854 f1=0.731 prec=0.727 rec=0.735 log_loss=0.6652
+  [fold 1/5] acc=0.854 f1=0.731 ll=0.6652 (legacy-ev acc=0.683)
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'avg_p_latency_3', 'process_cpu_seconds_rate_3', 'throughput_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.868 f1=0.800 prec=0.801 rec=0.800
+AR-DBN       acc=0.868 f1=0.800 prec=0.801 rec=0.800 log_loss=0.6158 acc@change=0.000
+Static BN SI acc=0.844 f1=0.690 prec=0.722 rec=0.719 log_loss=0.5149
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.56s  EVAL TIME: 0.00s
+CACHE hits=1105 / 1115 queries (99.1%) unique evidence combos=10
+DBN (corrected evidence)  acc=0.868 f1=0.800 log_loss=0.6158 acc@change=0.000 (n=147)
+DBN (legacy/no-target ev) acc=0.684 f1=0.499 log_loss=0.9503
+  [throughput_1] acc=0.838 f1=0.804 prec=0.861 rec=0.768 log_loss=0.5427
+  [throughput_2] acc=0.822 f1=0.626 prec=0.627 rec=0.657 log_loss=0.6998
+  [throughput_3] acc=0.868 f1=0.800 prec=0.801 rec=0.800 log_loss=0.6158
+  [fold 2/5] acc=0.868 f1=0.800 ll=0.6158 (legacy-ev acc=0.684)
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'process_cpu_seconds_rate_3', 'python_gc_collections_rate_6', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.867 f1=0.718 prec=0.718 rec=0.718
+AR-DBN       acc=0.867 f1=0.718 prec=0.718 rec=0.718 log_loss=0.6154 acc@change=0.000
+Static BN SI acc=0.936 f1=0.891 prec=0.884 rec=0.906 log_loss=0.2216
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.64s  EVAL TIME: 0.00s
+CACHE hits=1105 / 1115 queries (99.1%) unique evidence combos=10
+DBN (corrected evidence)  acc=0.867 f1=0.718 log_loss=0.6154 acc@change=0.000 (n=148)
+DBN (legacy/no-target ev) acc=0.717 f1=0.461 log_loss=0.9274
+  [throughput_1] acc=0.646 f1=0.484 prec=0.538 rec=0.494 log_loss=0.9663
+  [throughput_2] acc=0.826 f1=0.638 prec=0.665 rec=0.633 log_loss=0.9624
+  [throughput_3] acc=0.867 f1=0.718 prec=0.718 rec=0.718 log_loss=0.6154
+  [fold 3/5] acc=0.867 f1=0.718 ll=0.6154 (legacy-ev acc=0.717)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'python_gc_collections_rate_3', 'process_cpu_seconds_rate_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.894 f1=0.809 prec=0.809 rec=0.809
+AR-DBN       acc=0.894 f1=0.809 prec=0.809 rec=0.809 log_loss=0.5447 acc@change=0.000
+Static BN SI acc=0.929 f1=0.826 prec=0.902 rec=0.830 log_loss=0.2834
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.99s  EVAL TIME: 0.01s
+CACHE hits=1028 / 1127 queries (91.2%) unique evidence combos=99
+DBN (corrected evidence)  acc=0.897 f1=0.810 log_loss=0.4756 acc@change=0.033 (n=120)
+DBN (legacy/no-target ev) acc=0.637 f1=0.562 log_loss=0.9692
+  [throughput_1] acc=0.618 f1=0.492 prec=0.544 rec=0.501 log_loss=1.4072
+  [throughput_2] acc=0.562 f1=0.407 prec=0.449 rec=0.415 log_loss=1.8827
+  [throughput_3] acc=0.897 f1=0.810 prec=0.810 rec=0.811 log_loss=0.4756
+  [fold 4/5] acc=0.897 f1=0.810 ll=0.4756 (legacy-ev acc=0.637)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['data_quality_3', 'python_gc_collections_rate_9', 'process_cpu_seconds_rate_3', 'throughput_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.891 f1=0.758 prec=0.758 rec=0.758
+AR-DBN       acc=0.891 f1=0.758 prec=0.758 rec=0.758 log_loss=0.5136 acc@change=0.000
+Static BN SI acc=0.954 f1=0.749 prec=0.754 rec=0.746 log_loss=0.2511
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.96s  EVAL TIME: 0.02s
+CACHE hits=1018 / 1115 queries (91.3%) unique evidence combos=97
+DBN (corrected evidence)  acc=0.893 f1=0.759 log_loss=0.4381 acc@change=0.017 (n=121)
+DBN (legacy/no-target ev) acc=0.776 f1=0.631 log_loss=0.9032
+  [throughput_1] acc=0.730 f1=0.603 prec=0.657 rec=0.601 log_loss=0.7433
+  [throughput_2] acc=0.618 f1=0.394 prec=0.429 rec=0.392 log_loss=1.4406
+  [throughput_3] acc=0.893 f1=0.759 prec=0.759 rec=0.759 log_loss=0.4381
+  [fold 5/5] acc=0.893 f1=0.759 ll=0.4381 (legacy-ev acc=0.776)
+[OK] target=throughput_3 K= 4 n_bins=  10 fs=markov disc=classic_uniform score=aic folds=5/5 total=29.1s | acc=0.876±0.018 | f1=0.764±0.041 | ll=0.5620±0.0990 | legacy_acc=0.699 | ar_acc=0.875 | si_acc=0.909 | mb=4 fb=none
+[START] target=throughput_3 K=4 n_bins=  20 fs=markov disc=classic_uniform score=aic
+TRAIN_READY COLS: ['python_gc_collections_rate_3', 'throughput_2', 'throughput_1', 'process_cpu_seconds_rate_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.801 f1=0.611 prec=0.609 rec=0.613
+AR-DBN       acc=0.795 f1=0.570 prec=0.560 rec=0.584 log_loss=1.0125 acc@change=0.004
+Static BN SI acc=0.803 f1=0.657 prec=0.684 rec=0.670 log_loss=1.0303
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.45s  EVAL TIME: 0.01s
+CACHE hits=1108 / 1127 queries (98.3%) unique evidence combos=19
+DBN (corrected evidence)  acc=0.795 f1=0.570 log_loss=1.0125 acc@change=0.004 (n=224)
+DBN (legacy/no-target ev) acc=0.492 f1=0.345 log_loss=1.5461
+  [throughput_1] acc=0.444 f1=0.349 prec=0.384 rec=0.351 log_loss=2.3604
+  [throughput_2] acc=0.741 f1=0.519 prec=0.555 rec=0.528 log_loss=1.3005
+  [throughput_3] acc=0.795 f1=0.570 prec=0.560 rec=0.584 log_loss=1.0125
+  [fold 1/5] acc=0.795 f1=0.570 ll=1.0125 (legacy-ev acc=0.492)
+TRAIN_READY COLS: ['python_gc_collections_rate_3', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.816 f1=0.586 prec=0.586 rec=0.586
+AR-DBN       acc=0.810 f1=0.542 prec=0.537 rec=0.548 log_loss=0.9604 acc@change=0.005
+Static BN SI acc=0.785 f1=0.607 prec=0.629 rec=0.620 log_loss=0.9762
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.48s  EVAL TIME: 0.01s
+CACHE hits=1095 / 1115 queries (98.2%) unique evidence combos=20
+DBN (corrected evidence)  acc=0.810 f1=0.542 log_loss=0.9604 acc@change=0.005 (n=205)
+DBN (legacy/no-target ev) acc=0.503 f1=0.280 log_loss=1.4104
+  [throughput_1] acc=0.461 f1=0.247 prec=0.295 rec=0.322 log_loss=1.6904
+  [throughput_2] acc=0.444 f1=0.300 prec=0.310 rec=0.336 log_loss=1.9603
+  [throughput_3] acc=0.810 f1=0.542 prec=0.537 rec=0.548 log_loss=0.9604
+  [fold 2/5] acc=0.810 f1=0.542 ll=0.9604 (legacy-ev acc=0.503)
+TRAIN_READY COLS: ['python_gc_collections_rate_3', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.816 f1=0.586 prec=0.587 rec=0.586
+AR-DBN       acc=0.815 f1=0.548 prec=0.547 rec=0.549 log_loss=0.8819 acc@change=0.005
+Static BN SI acc=0.838 f1=0.674 prec=0.664 rec=0.692 log_loss=0.6711
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.47s  EVAL TIME: 0.01s
+CACHE hits=1095 / 1115 queries (98.2%) unique evidence combos=20
+DBN (corrected evidence)  acc=0.815 f1=0.548 log_loss=0.8819 acc@change=0.005 (n=205)
+DBN (legacy/no-target ev) acc=0.570 f1=0.295 log_loss=1.3292
+  [throughput_1] acc=0.823 f1=0.754 prec=0.758 rec=0.751 log_loss=0.7332
+  [throughput_2] acc=0.539 f1=0.324 prec=0.322 rec=0.380 log_loss=1.7981
+  [throughput_3] acc=0.815 f1=0.548 prec=0.547 rec=0.549 log_loss=0.8819
+  [fold 3/5] acc=0.815 f1=0.548 ll=0.8819 (legacy-ev acc=0.570)
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'buffer_size_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.856 f1=0.736 prec=0.736 rec=0.736
+AR-DBN       acc=0.856 f1=0.736 prec=0.736 rec=0.736 log_loss=0.7720 acc@change=0.000
+Static BN SI acc=0.884 f1=0.776 prec=0.805 rec=0.770 log_loss=0.8691
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.58s  EVAL TIME: 0.01s
+CACHE hits=1110 / 1127 queries (98.5%) unique evidence combos=17
+DBN (corrected evidence)  acc=0.856 f1=0.736 log_loss=0.7720 acc@change=0.000 (n=162)
+DBN (legacy/no-target ev) acc=0.508 f1=0.338 log_loss=1.3694
+  [throughput_1] acc=0.546 f1=0.420 prec=0.436 rec=0.452 log_loss=1.8794
+  [throughput_2] acc=0.754 f1=0.537 prec=0.572 rec=0.524 log_loss=1.0730
+  [throughput_3] acc=0.856 f1=0.736 prec=0.736 rec=0.736 log_loss=0.7720
+  [fold 4/5] acc=0.856 f1=0.736 ll=0.7720 (legacy-ev acc=0.508)
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'buffer_size_3', 'python_gc_collections_rate_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.843 f1=0.690 prec=0.690 rec=0.690
+AR-DBN       acc=0.844 f1=0.691 prec=0.690 rec=0.691 log_loss=0.7422 acc@change=0.006
+Static BN SI acc=0.845 f1=0.736 prec=0.758 rec=0.735 log_loss=0.6210
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.56s  EVAL TIME: 0.01s
+CACHE hits=1099 / 1115 queries (98.6%) unique evidence combos=16
+DBN (corrected evidence)  acc=0.844 f1=0.691 log_loss=0.7422 acc@change=0.006 (n=175)
+DBN (legacy/no-target ev) acc=0.545 f1=0.339 log_loss=1.2498
+  [throughput_1] acc=0.674 f1=0.476 prec=0.516 rec=0.509 log_loss=1.0357
+  [throughput_2] acc=0.789 f1=0.566 prec=0.602 rec=0.566 log_loss=0.9704
+  [throughput_3] acc=0.844 f1=0.691 prec=0.690 rec=0.691 log_loss=0.7422
+  [fold 5/5] acc=0.844 f1=0.691 ll=0.7422 (legacy-ev acc=0.545)
+[OK] target=throughput_3 K= 4 n_bins=  20 fs=markov disc=classic_uniform score=aic folds=5/5 total=33.7s | acc=0.824±0.025 | f1=0.617±0.090 | ll=0.8738±0.1167 | legacy_acc=0.524 | ar_acc=0.824 | si_acc=0.831 | mb=1 fb=padded
+[START] target=throughput_3 K=4 n_bins=   4 fs=markov disc=classic_quantile score=bic
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['throughput_2', 'python_gc_collections_rate_3', 'avg_p_latency_3', 'python_gc_collections_rate_5', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.890 f1=0.880 prec=0.880 rec=0.880
+AR-DBN       acc=0.890 f1=0.880 prec=0.880 rec=0.880 log_loss=0.4587 acc@change=0.000
+Static BN SI acc=0.809 f1=0.807 prec=0.830 rec=0.815 log_loss=0.7368
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.41s  EVAL TIME: 0.00s
+CACHE hits=1123 / 1127 queries (99.6%) unique evidence combos=4
+DBN (corrected evidence)  acc=0.890 f1=0.880 log_loss=0.4587 acc@change=0.000 (n=124)
+DBN (legacy/no-target ev) acc=0.587 f1=0.591 log_loss=1.1502
+  [throughput_1] acc=0.593 f1=0.593 prec=0.677 rec=0.616 log_loss=0.7446
+  [throughput_2] acc=0.545 f1=0.545 prec=0.705 rec=0.554 log_loss=0.8610
+  [throughput_3] acc=0.890 f1=0.880 prec=0.880 rec=0.880 log_loss=0.4587
+  [fold 1/5] acc=0.890 f1=0.880 ll=0.4587 (legacy-ev acc=0.587)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'python_gc_collections_rate_6', 'python_gc_collections_rate_5', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.882 f1=0.882 prec=0.882 rec=0.883
+AR-DBN       acc=0.882 f1=0.882 prec=0.882 rec=0.883 log_loss=0.4801 acc@change=0.000
+Static BN SI acc=0.846 f1=0.851 prec=0.862 rec=0.849 log_loss=0.4523
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.44s  EVAL TIME: 0.01s
+CACHE hits=1111 / 1115 queries (99.6%) unique evidence combos=4
+DBN (corrected evidence)  acc=0.882 f1=0.882 log_loss=0.4801 acc@change=0.000 (n=132)
+DBN (legacy/no-target ev) acc=0.274 f1=0.108 log_loss=1.3860
+  [throughput_1] acc=0.921 f1=0.920 prec=0.928 rec=0.921 log_loss=0.1831
+  [throughput_2] acc=0.867 f1=0.868 prec=0.866 rec=0.873 log_loss=0.4764
+  [throughput_3] acc=0.882 f1=0.882 prec=0.882 rec=0.883 log_loss=0.4801
+  [fold 2/5] acc=0.882 f1=0.882 ll=0.4801 (legacy-ev acc=0.274)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'python_gc_collections_rate_6', 'python_gc_collections_rate_5', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.886 f1=0.884 prec=0.884 rec=0.884
+AR-DBN       acc=0.886 f1=0.884 prec=0.884 rec=0.884 log_loss=0.4823 acc@change=0.000
+Static BN SI acc=0.874 f1=0.874 prec=0.878 rec=0.872 log_loss=0.3597
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.56s  EVAL TIME: 0.01s
+CACHE hits=1044 / 1115 queries (93.6%) unique evidence combos=71
+DBN (corrected evidence)  acc=0.888 f1=0.886 log_loss=0.3742 acc@change=0.016 (n=127)
+DBN (legacy/no-target ev) acc=0.651 f1=0.652 log_loss=1.3046
+  [throughput_1] acc=0.839 f1=0.843 prec=0.885 rec=0.831 log_loss=0.3367
+  [throughput_2] acc=0.596 f1=0.597 prec=0.628 rec=0.618 log_loss=1.2911
+  [throughput_3] acc=0.888 f1=0.886 prec=0.886 rec=0.887 log_loss=0.3742
+  [fold 3/5] acc=0.888 f1=0.886 ll=0.3742 (legacy-ev acc=0.651)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'python_gc_collections_rate_6', 'python_gc_collections_rate_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.927 f1=0.928 prec=0.928 rec=0.927
+AR-DBN       acc=0.927 f1=0.928 prec=0.928 rec=0.927 log_loss=0.3533 acc@change=0.000
+Static BN SI acc=0.906 f1=0.909 prec=0.920 rec=0.902 log_loss=0.3036
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.60s  EVAL TIME: 0.01s
+CACHE hits=1066 / 1127 queries (94.6%) unique evidence combos=61
+DBN (corrected evidence)  acc=0.928 f1=0.929 log_loss=0.2786 acc@change=0.012 (n=82)
+DBN (legacy/no-target ev) acc=0.625 f1=0.630 log_loss=1.2883
+  [throughput_1] acc=0.901 f1=0.904 prec=0.905 rec=0.904 log_loss=0.4597
+  [throughput_2] acc=0.780 f1=0.783 prec=0.786 rec=0.782 log_loss=0.6599
+  [throughput_3] acc=0.928 f1=0.929 prec=0.929 rec=0.928 log_loss=0.2786
+  [fold 4/5] acc=0.928 f1=0.929 ll=0.2786 (legacy-ev acc=0.625)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'python_gc_collections_rate_3', 'python_gc_collections_rate_6', 'throughput_3', 'throughput_1', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.916 f1=0.914 prec=0.914 rec=0.914
+AR-DBN       acc=0.916 f1=0.914 prec=0.914 rec=0.914 log_loss=0.3797 acc@change=0.000
+Static BN SI acc=0.897 f1=0.898 prec=0.899 rec=0.900 log_loss=0.3282
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.63s  EVAL TIME: 0.01s
+CACHE hits=1052 / 1115 queries (94.3%) unique evidence combos=63
+DBN (corrected evidence)  acc=0.917 f1=0.916 log_loss=0.3024 acc@change=0.021 (n=94)
+DBN (legacy/no-target ev) acc=0.648 f1=0.639 log_loss=1.0822
+  [throughput_1] acc=0.853 f1=0.840 prec=0.870 rec=0.856 log_loss=0.3065
+  [throughput_2] acc=0.711 f1=0.708 prec=0.706 rec=0.732 log_loss=0.9703
+  [throughput_3] acc=0.917 f1=0.916 prec=0.916 rec=0.916 log_loss=0.3024
+  [fold 5/5] acc=0.917 f1=0.916 ll=0.3024 (legacy-ev acc=0.648)
+[OK] target=throughput_3 K= 4 n_bins=   4 fs=markov disc=classic_quantile score=bic folds=5/5 total=24.1s | acc=0.901±0.020 | f1=0.899±0.022 | ll=0.3788±0.0902 | legacy_acc=0.557 | ar_acc=0.900 | si_acc=0.866 | mb=8 fb=trimmed
+[START] target=throughput_3 K=4 n_bins=  10 fs=markov disc=classic_quantile score=bic
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'process_cpu_seconds_rate_3', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.801 f1=0.767 prec=0.767 rec=0.767
+AR-DBN       acc=0.801 f1=0.767 prec=0.767 rec=0.767 log_loss=0.8529 acc@change=0.000
+Static BN SI acc=0.795 f1=0.784 prec=0.782 rec=0.802 log_loss=0.9322
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.33s  EVAL TIME: 0.01s
+CACHE hits=1090 / 1127 queries (96.7%) unique evidence combos=37
+DBN (corrected evidence)  acc=0.801 f1=0.767 log_loss=0.8466 acc@change=0.000 (n=224)
+DBN (legacy/no-target ev) acc=0.475 f1=0.415 log_loss=2.1607
+  [throughput_1] acc=0.769 f1=0.773 prec=0.775 rec=0.788 log_loss=0.9603
+  [throughput_2] acc=0.571 f1=0.548 prec=0.562 rec=0.594 log_loss=1.6534
+  [throughput_3] acc=0.801 f1=0.767 prec=0.767 rec=0.767 log_loss=0.8466
+  [fold 1/5] acc=0.801 f1=0.767 ll=0.8466 (legacy-ev acc=0.475)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'avg_p_latency_1', 'process_cpu_seconds_rate_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.798 f1=0.792 prec=0.792 rec=0.792
+AR-DBN       acc=0.798 f1=0.792 prec=0.792 rec=0.792 log_loss=0.8606 acc@change=0.000
+Static BN SI acc=0.748 f1=0.751 prec=0.766 rec=0.773 log_loss=0.9979
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.30s  EVAL TIME: 0.01s
+CACHE hits=1105 / 1115 queries (99.1%) unique evidence combos=10
+DBN (corrected evidence)  acc=0.798 f1=0.792 log_loss=0.8606 acc@change=0.000 (n=225)
+DBN (legacy/no-target ev) acc=0.432 f1=0.410 log_loss=1.3710
+  [throughput_1] acc=0.603 f1=0.575 prec=0.652 rec=0.583 log_loss=1.0108
+  [throughput_2] acc=0.485 f1=0.467 prec=0.506 rec=0.469 log_loss=1.6746
+  [throughput_3] acc=0.798 f1=0.792 prec=0.792 rec=0.792 log_loss=0.8606
+  [fold 2/5] acc=0.798 f1=0.792 ll=0.8606 (legacy-ev acc=0.432)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['python_gc_collections_rate_3', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.790 f1=0.788 prec=0.788 rec=0.788
+AR-DBN       acc=0.790 f1=0.788 prec=0.788 rec=0.788 log_loss=0.9040 acc@change=0.000
+Static BN SI acc=0.763 f1=0.772 prec=0.772 rec=0.778 log_loss=0.8293
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.27s  EVAL TIME: 0.01s
+CACHE hits=1105 / 1115 queries (99.1%) unique evidence combos=10
+DBN (corrected evidence)  acc=0.790 f1=0.788 log_loss=0.9040 acc@change=0.000 (n=234)
+DBN (legacy/no-target ev) acc=0.453 f1=0.413 log_loss=1.4612
+  [throughput_1] acc=0.780 f1=0.770 prec=0.842 rec=0.775 log_loss=0.7001
+  [throughput_2] acc=0.761 f1=0.758 prec=0.760 rec=0.763 log_loss=1.0010
+  [throughput_3] acc=0.790 f1=0.788 prec=0.788 rec=0.788 log_loss=0.9040
+  [fold 3/5] acc=0.790 f1=0.788 ll=0.9040 (legacy-ev acc=0.453)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'buffer_size_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.776 f1=0.758 prec=0.758 rec=0.758
+AR-DBN       acc=0.776 f1=0.758 prec=0.758 rec=0.758 log_loss=0.8677 acc@change=0.000
+Static BN SI acc=0.691 f1=0.710 prec=0.730 rec=0.735 log_loss=0.9882
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.34s  EVAL TIME: 0.01s
+CACHE hits=1117 / 1127 queries (99.1%) unique evidence combos=10
+DBN (corrected evidence)  acc=0.776 f1=0.758 log_loss=0.8677 acc@change=0.000 (n=252)
+DBN (legacy/no-target ev) acc=0.430 f1=0.338 log_loss=1.4270
+  [throughput_1] acc=0.571 f1=0.574 prec=0.616 rec=0.580 log_loss=1.2697
+  [throughput_2] acc=0.761 f1=0.765 prec=0.770 rec=0.769 log_loss=0.8764
+  [throughput_3] acc=0.776 f1=0.758 prec=0.758 rec=0.758 log_loss=0.8677
+  [fold 4/5] acc=0.776 f1=0.758 ll=0.8677 (legacy-ev acc=0.430)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['throughput_2', 'python_gc_collections_rate_9', 'throughput_1', 'buffer_size_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.801 f1=0.788 prec=0.788 rec=0.788
+AR-DBN       acc=0.801 f1=0.788 prec=0.788 rec=0.788 log_loss=0.8119 acc@change=0.000
+Static BN SI acc=0.782 f1=0.777 prec=0.793 rec=0.771 log_loss=0.7900
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.27s  EVAL TIME: 0.00s
+CACHE hits=1105 / 1115 queries (99.1%) unique evidence combos=10
+DBN (corrected evidence)  acc=0.801 f1=0.788 log_loss=0.8119 acc@change=0.000 (n=222)
+DBN (legacy/no-target ev) acc=0.399 f1=0.358 log_loss=1.5745
+  [throughput_1] acc=0.890 f1=0.877 prec=0.879 rec=0.881 log_loss=0.3971
+  [throughput_2] acc=0.813 f1=0.800 prec=0.803 rec=0.804 log_loss=0.7252
+  [throughput_3] acc=0.801 f1=0.788 prec=0.788 rec=0.788 log_loss=0.8119
+  [fold 5/5] acc=0.801 f1=0.788 ll=0.8119 (legacy-ev acc=0.399)
+[OK] target=throughput_3 K= 4 n_bins=  10 fs=markov disc=classic_quantile score=bic folds=5/5 total=20.5s | acc=0.793±0.010 | f1=0.779±0.015 | ll=0.8582±0.0334 | legacy_acc=0.438 | ar_acc=0.793 | si_acc=0.756 | mb=2 fb=padded
+[START] target=throughput_3 K=4 n_bins=  20 fs=markov disc=classic_quantile score=bic
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'process_cpu_seconds_rate_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.671 f1=0.603 prec=0.603 rec=0.603
+AR-DBN       acc=0.671 f1=0.603 prec=0.603 rec=0.603 log_loss=1.3128 acc@change=0.000
+Static BN SI acc=0.645 f1=0.621 prec=0.653 rec=0.640 log_loss=1.3297
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.22s  EVAL TIME: 0.01s
+CACHE hits=1008 / 1127 queries (89.4%) unique evidence combos=119
+DBN (corrected evidence)  acc=0.673 f1=0.588 log_loss=1.2364 acc@change=0.108 (n=371)
+DBN (legacy/no-target ev) acc=0.350 f1=0.304 log_loss=1.9694
+  [throughput_1] acc=0.253 f1=0.159 prec=0.128 rec=0.257 log_loss=2.8907
+  [throughput_2] acc=0.558 f1=0.512 prec=0.553 rec=0.523 log_loss=1.8860
+  [throughput_3] acc=0.673 f1=0.588 prec=0.587 rec=0.595 log_loss=1.2364
+  [fold 1/5] acc=0.673 f1=0.588 ll=1.2364 (legacy-ev acc=0.350)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.656 f1=0.616 prec=0.616 rec=0.616
+AR-DBN       acc=0.656 f1=0.616 prec=0.616 rec=0.616 log_loss=1.3580 acc@change=0.000
+Static BN SI acc=0.663 f1=0.628 prec=0.644 rec=0.650 log_loss=1.5254
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.22s  EVAL TIME: 0.00s
+CACHE hits=1095 / 1115 queries (98.2%) unique evidence combos=20
+DBN (corrected evidence)  acc=0.656 f1=0.616 log_loss=1.3580 acc@change=0.000 (n=384)
+DBN (legacy/no-target ev) acc=0.343 f1=0.217 log_loss=1.9626
+  [throughput_1] acc=0.748 f1=0.697 prec=0.692 rec=0.718 log_loss=1.0085
+  [throughput_2] acc=0.662 f1=0.634 prec=0.661 rec=0.635 log_loss=1.2714
+  [throughput_3] acc=0.656 f1=0.616 prec=0.616 rec=0.616 log_loss=1.3580
+  [fold 2/5] acc=0.656 f1=0.616 ll=1.3580 (legacy-ev acc=0.343)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'avg_p_latency_1', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.646 f1=0.634 prec=0.634 rec=0.634
+AR-DBN       acc=0.646 f1=0.634 prec=0.634 rec=0.634 log_loss=1.3704 acc@change=0.000
+Static BN SI acc=0.642 f1=0.642 prec=0.661 rec=0.668 log_loss=1.2140
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.24s  EVAL TIME: 0.01s
+CACHE hits=1030 / 1115 queries (92.4%) unique evidence combos=85
+DBN (corrected evidence)  acc=0.652 f1=0.639 log_loss=1.3664 acc@change=0.033 (n=395)
+DBN (legacy/no-target ev) acc=0.407 f1=0.368 log_loss=1.8598
+  [throughput_1] acc=0.207 f1=0.130 prec=0.105 rec=0.190 log_loss=2.2455
+  [throughput_2] acc=0.220 f1=0.209 prec=0.229 rec=0.261 log_loss=2.4609
+  [throughput_3] acc=0.652 f1=0.639 prec=0.640 rec=0.640 log_loss=1.3664
+  [fold 3/5] acc=0.652 f1=0.639 ll=1.3664 (legacy-ev acc=0.407)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['python_gc_collections_rate_3', 'throughput_2', 'throughput_1', 'buffer_size_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.670 f1=0.623 prec=0.623 rec=0.623
+AR-DBN       acc=0.670 f1=0.623 prec=0.623 rec=0.623 log_loss=1.2164 acc@change=0.000
+Static BN SI acc=0.659 f1=0.655 prec=0.654 rec=0.685 log_loss=1.3043
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.27s  EVAL TIME: 0.01s
+CACHE hits=1107 / 1127 queries (98.2%) unique evidence combos=20
+DBN (corrected evidence)  acc=0.670 f1=0.623 log_loss=1.2164 acc@change=0.000 (n=372)
+DBN (legacy/no-target ev) acc=0.357 f1=0.289 log_loss=1.8892
+  [throughput_1] acc=0.546 f1=0.548 prec=0.600 rec=0.563 log_loss=1.8861
+  [throughput_2] acc=0.599 f1=0.582 prec=0.576 rec=0.601 log_loss=1.4796
+  [throughput_3] acc=0.670 f1=0.623 prec=0.623 rec=0.623 log_loss=1.2164
+  [fold 4/5] acc=0.670 f1=0.623 ll=1.2164 (legacy-ev acc=0.357)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['python_gc_collections_rate_6', 'throughput_2', 'throughput_1', 'buffer_size_3', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.709 f1=0.695 prec=0.695 rec=0.695
+AR-DBN       acc=0.709 f1=0.695 prec=0.695 rec=0.695 log_loss=1.1786 acc@change=0.000
+Static BN SI acc=0.694 f1=0.674 prec=0.692 rec=0.693 log_loss=1.0041
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.27s  EVAL TIME: 0.01s
+CACHE hits=1040 / 1115 queries (93.3%) unique evidence combos=75
+DBN (corrected evidence)  acc=0.715 f1=0.703 log_loss=1.1854 acc@change=0.046 (n=325)
+DBN (legacy/no-target ev) acc=0.516 f1=0.465 log_loss=1.7337
+  [throughput_1] acc=0.664 f1=0.604 prec=0.668 rec=0.623 log_loss=1.0555
+  [throughput_2] acc=0.495 f1=0.419 prec=0.420 rec=0.450 log_loss=2.1482
+  [throughput_3] acc=0.715 f1=0.703 prec=0.704 rec=0.703 log_loss=1.1854
+  [fold 5/5] acc=0.715 f1=0.703 ll=1.1854 (legacy-ev acc=0.516)
+[OK] target=throughput_3 K= 4 n_bins=  20 fs=markov disc=classic_quantile score=bic folds=5/5 total=15.9s | acc=0.673±0.025 | f1=0.634±0.043 | ll=1.2725±0.0839 | legacy_acc=0.394 | ar_acc=0.670 | si_acc=0.661 | mb=2 fb=padded
+[START] target=throughput_3 K=4 n_bins=   4 fs=markov disc=classic_quantile score=aic
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'python_gc_collections_rate_3', 'python_gc_collections_rate_5', 'cores_2', 'throughput_3', 'throughput_1', 'cores_1', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.890 f1=0.880 prec=0.880 rec=0.880
+AR-DBN       acc=0.890 f1=0.880 prec=0.880 rec=0.880 log_loss=0.4587 acc@change=0.000
+Static BN SI acc=0.825 f1=0.839 prec=0.853 rec=0.847 log_loss=0.7321
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 0.76s  EVAL TIME: 0.01s
+CACHE hits=1069 / 1127 queries (94.9%) unique evidence combos=58
+DBN (corrected evidence)  acc=0.897 f1=0.888 log_loss=0.3681 acc@change=0.065 (n=124)
+DBN (legacy/no-target ev) acc=0.725 f1=0.723 log_loss=1.0846
+  [throughput_1] acc=0.350 f1=0.321 prec=0.655 rec=0.384 log_loss=1.1802
+  [throughput_2] acc=0.499 f1=0.484 prec=0.579 rec=0.516 log_loss=1.1889
+  [throughput_3] acc=0.897 f1=0.888 prec=0.891 rec=0.885 log_loss=0.3681
+  [fold 1/5] acc=0.897 f1=0.888 ll=0.3681 (legacy-ev acc=0.725)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'throughput_1', 'buffer_size_3', 'python_gc_collections_rate_6', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.882 f1=0.882 prec=0.882 rec=0.883
+AR-DBN       acc=0.882 f1=0.882 prec=0.882 rec=0.883 log_loss=0.4801 acc@change=0.000
+Static BN SI acc=0.822 f1=0.831 prec=0.850 rec=0.828 log_loss=0.5860
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 1.38s  EVAL TIME: 0.01s
+CACHE hits=1040 / 1115 queries (93.3%) unique evidence combos=75
+DBN (corrected evidence)  acc=0.882 f1=0.882 log_loss=0.3993 acc@change=0.000 (n=132)
+DBN (legacy/no-target ev) acc=0.715 f1=0.718 log_loss=1.3032
+  [throughput_1] acc=0.735 f1=0.731 prec=0.733 rec=0.739 log_loss=0.3867
+  [throughput_2] acc=0.663 f1=0.668 prec=0.698 rec=0.684 log_loss=0.8695
+  [throughput_3] acc=0.882 f1=0.882 prec=0.882 rec=0.883 log_loss=0.3993
+  [fold 2/5] acc=0.882 f1=0.882 ll=0.3993 (legacy-ev acc=0.715)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(

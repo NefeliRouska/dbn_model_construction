@@ -145,6 +145,8 @@ and t−1; each has one table; the model is unrolled with 100 particles from
 - The same pattern holds for `throughput_1` and `throughput_2`
   (`results/rollout/*_summary.csv`).
 
+![Accuracy by horizon](figures/rollout.png)
+
 Practical reading: for "what happens in the next second or two" the DBN can
 be used as one generative model of the chain; for longer horizons train the
 tables for the horizon wanted, or give the state a slow component.
@@ -186,6 +188,8 @@ Results on the unseen configurations (15 480 rows):
 | Gradient boosting on (load, cores, quality) | 0.83 / 6.0 | 0.53 / 31 | 0.46 / 38 |
 | Gradient boosting on (load, capacities) | 0.92 / 2.3 | 0.65 / 25 | 0.57 / 33 |
 | TabPFN v2 on (load, cores, quality), median forecast | **0.93** / 2.3 | 0.51 / 34 | 0.41 / 46 |
+
+![Unseen configurations](figures/unseen_configurations.png)
 
 - A table treats `cores = 4` and `cores = 5` as unrelated labels, so it has
   nothing to say about a combination it has not seen (uniform prediction).
@@ -291,6 +295,8 @@ configuration):
 | the three throughputs | 0.915 | 84% |
 | **all eight nodes** | **0.984** | **93%** |
 
+![Reconfiguration detection](figures/reconfiguration_detection.png)
+
 **A bottleneck regime that was not in the training data, per run** (AUC):
 
 | Unseen regime | Surprise, target only | Surprise, all nodes | Miscalibration, all nodes |
@@ -309,6 +315,22 @@ configuration):
 - `s23` is rare (≈60 runs per dataset) and affects mainly service 3; adding the
   other nodes dilutes it. A detector per service, or a weighted sum, is the
   next thing to try.
+
+**How long it takes.** A two-sided CUSUM on the per-second miscalibration,
+tuned on half of the known-regime test runs so that 5% of them raise an alarm
+somewhere in their six minutes:
+
+| Unseen regime | Nodes | False alarms (held-out known runs) | Runs of the new regime detected | Median seconds to alarm |
+|---|---|---|---|---|
+| s1 | target only | 5% | 22% | 163 |
+| s1 | **all nodes** | 7% | **75%** | **79** |
+| none | all nodes | 3% | 31% | 166 |
+| s23 | all nodes | 5% | 16% | 150 |
+
+A regime in which the first service saturates is noticed in three quarters of
+the runs, typically within 80 seconds. The other two are mostly missed by this
+detector within one run; they are the cases where the system behaves "like
+before, only calmer" or where the difference is confined to one service.
 
 ## 10. Adapting after a new regime appears
 
@@ -348,6 +370,8 @@ node for the numeric forecast. 1 s, 20 bins:
 | avg_p_latency_3 | 0.904 | 0.914 | +0.011 [0.009, 0.012] | 0.304 | 0.362 | **0.282** |
 | buffer_size_2 | 0.920 | 0.925 | +0.005 [0.004, 0.006] | 40.1 | 40.6 | **32.6** (linear per regime: 26.8) |
 | buffer_size_3 | 0.879 | 0.890 | +0.011 [0.008, 0.013] | **24.7** | 32.5 | 25.8 (linear per regime: 23.7) |
+
+![All targets](figures/all_targets.png)
 
 With 50 bins the gains over AR are larger (`throughput_3` +0.071,
 `throughput_2` +0.039, `avg_p_latency_1` +0.036). For `throughput_3` at 30 s:

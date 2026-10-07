@@ -18,6 +18,13 @@ of a step) is the sum of the surprises of a set of nodes:
                         i.e. how far the surprise is from what the model itself
                         expected. A new regime can be EASIER than the known ones
                         (less surprise than expected); this score sees that too.
+(a') how many seconds it takes: a two-sided CUSUM on the per-second
+    miscalibration (surprise minus predicted entropy, summed over the nodes).
+    Its reference level, slack and threshold are set on half of the test runs
+    of the known regimes so that 5% of them raise an alarm at some point of
+    their 6 minutes; reported are the false-alarm rate on the other half, the
+    share of runs of the unseen regime that raise an alarm, and the median
+    number of seconds until they do.
 (b) step-level: models that are not told the configuration; AUC of the score
     on the first step after a reconfiguration against ordinary steps, and the
     share of reconfigurations caught at 1% false alarms.
@@ -72,8 +79,60 @@ def surprise(S, cfg, tr, te):
     return score(P, c_te.y)[1], entropy
 
 
+def cusum_alarm_times(x, run, mu, slack, threshold):
+    """First position (seconds into the run) at which a two-sided CUSUM exceeds threshold; inf if never."""
+    out = {}
+    order = np.argsort(run, kind="stable")
+    bounds = np.flatnonzero(np.r_[True, run[order][1:] != run[order][:-1], True])
+    for a, b in zip(bounds[:-1], bounds[1:]):
+        z = x[order[a:b]] - mu
+        up = dn = 0.0
+        t_alarm = np.inf
+        for t, v in enumerate(z):
+            up = max(0.0, up + v - slack)
+            dn = max(0.0, dn - v - slack)
+            if up > threshold or dn > threshold:
+                t_alarm = t + 1
+                break
+        out[run[order[a]]] = t_alarm
+    return out
+
+
+def cusum_rows(fi, r, run, novel, per_node):
+    rows = []
+    known_runs = np.unique(run[~novel])
+    rng = np.random.default_rng(0)
+    calib = set(rng.choice(known_runs, len(known_runs) // 2, replace=False).tolist())
+    is_calib = np.isin(run, list(calib))
+    for name, nodes in SETS.items():
+        x = sum(per_node[v][0] - per_node[v][1] for v in nodes)
+        mu, slack = x[is_calib].mean(), 0.5 * x[is_calib].std()
+        # threshold: 5% of the calibration runs raise an alarm
+        lo, hi = 0.0, 50.0 * max(slack, 1e-9) * 400
+        cal_idx = is_calib
+        for _ in range(30):
+            mid = (lo + hi) / 2
+            t = cusum_alarm_times(x[cal_idx], run[cal_idx], mu, slack, mid)
+            if np.mean(np.isfinite(list(t.values()))) > 0.05:
+                lo = mid
+            else:
+                hi = mid
+        times = cusum_alarm_times(x[~is_calib], run[~is_calib], mu, slack, hi)
+        novel_runs = set(np.unique(run[novel]).tolist())
+        t_new = np.array([t for k, t in times.items() if k in novel_runs])
+        t_old = np.array([t for k, t in times.items() if k not in novel_runs])
+        if len(t_new) and len(t_old):
+            rows.append({"fold": fi + 1, "unseen_regime": r, "nodes": name,
+                         "false_alarm_runs": float(np.isfinite(t_old).mean()),
+                         "detected_runs": float(np.isfinite(t_new).mean()),
+                         "median_seconds_to_alarm": float(np.median(t_new[np.isfinite(t_new)]))
+                         if np.isfinite(t_new).any() else np.nan,
+                         "n_new_runs": len(t_new)})
+    return rows
+
+
 def detection(csv, base):
-    """Returns (run-level rows, step-level rows)."""
+    """Returns (run-level rows, step-level rows, CUSUM rows)."""
     run_scores, step_scores, keys = {}, {}, {}
     for v in NODES:
         for mode, cfg in (("regime", node_cfg(base, v)), ("step", node_cfg(base, v, exog="none"))):
@@ -94,9 +153,10 @@ def detection(csv, base):
             A._sample_cache.clear()
         print(f"[detection] {v} done", flush=True)
 
-    run_rows, step_rows = [], []
+    run_rows, step_rows, cusum = [], [], []
     for (fi, r), per_node in run_scores.items():
         run, novel = keys[("regime", fi, r)]
+        cusum += cusum_rows(fi, r, run, novel, per_node)
         for name, nodes in SETS.items():
             s = pd.DataFrame({"run": run, "novel": novel,
                               "s": sum(per_node[v][0] for v in nodes),
@@ -113,7 +173,7 @@ def detection(csv, base):
             thr = np.quantile(s[~change], 0.99)
             step_rows.append({"fold": fi + 1, "score": name, "auc": roc_auc_score(change, s),
                               "caught_at_1pct_false_alarms": float((s[change] > thr).mean())})
-    return pd.DataFrame(run_rows), pd.DataFrame(step_rows)
+    return pd.DataFrame(run_rows), pd.DataFrame(step_rows), pd.DataFrame(cusum)
 
 
 def adaptation(csv, base):
@@ -182,8 +242,12 @@ def main():
         print(f"\n=== {stem} | accuracy on the new regime, by runs of it seen so far ===")
         print((g.correct / g.n).unstack("bucket").reindex(columns=order).round(3).to_string())
     if args.part in ("detection", "both"):
-        run_rows, step_rows = detection(args.csv, base)
+        run_rows, step_rows, cusum = detection(args.csv, base)
         run_rows.to_csv(RESULTS_DIR / f"{tag}_regime_detection.csv", index=False)
+        cusum.to_csv(RESULTS_DIR / f"{tag}_regime_cusum.csv", index=False)
+        print(f"\n=== {stem} | CUSUM on per-second miscalibration: unseen regime ===")
+        print(cusum.groupby(["unseen_regime", "nodes"])[["false_alarm_runs", "detected_runs",
+                                                         "median_seconds_to_alarm"]].mean().round(2).to_string())
         step_rows.to_csv(RESULTS_DIR / f"{tag}_reconfiguration_detection.csv", index=False)
         print(f"\n=== {stem} | run-level AUC for an unseen regime ===")
         print(run_rows.groupby(["unseen_regime", "nodes"])[["auc_surprise", "auc_miscalibration"]]

@@ -250,6 +250,11 @@ Newest first.
   for the skewed throughput of services 2 and 3).
 - Part 2 report: sections 9–12 added, summary extended.
 - Still no Prior Labs licence key on this machine: TabPFN v3.5 not run.
+- `adaptation_study.py`: sequential detector (CUSUM) with time to alarm.
+  `analysis/make_figures.py` writes the report figures to `docs/figures/`.
+  `scripts/run_long_jobs.sh` holds the jobs for the other machine.
+- Corrected `dbn_sweep.py` started at 30 s (bins 4 / 10 / 20, full grid) on the
+  three datasets; logs in `results/logs/dbn_*_30s_*.log`.
 
 ### 2026-10-07 (third pass, evening)
 
