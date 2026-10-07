@@ -17686,3 +17686,84 @@ DBN (legacy/no-target ev) acc=0.267 f1=0.047 log_loss=2.0475
   [throughput_2] acc=0.809 f1=0.726 prec=0.726 rec=0.730 log_loss=0.7309
   [throughput_3] acc=0.842 f1=0.837 prec=0.837 rec=0.837 log_loss=0.7328
   [fold 3/5] acc=0.842 f1=0.837 ll=0.7328 (legacy-ev acc=0.267)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'process_cpu_seconds_rate_3', 'throughput_1', 'python_gc_collections_rate_3', 'avg_p_latency_2', 'avg_p_latency_1', 'python_gc_collections_rate_6', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 4476 | pairs train=4475 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.795 f1=0.709 prec=0.709 rec=0.708
+AR-DBN       acc=0.795 f1=0.709 prec=0.709 rec=0.708 log_loss=0.7733 acc@change=0.000
+Static BN SI acc=0.855 f1=0.807 prec=0.821 rec=0.795 log_loss=0.5324
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.54s  EVAL TIME: 0.01s
+CACHE hits=1086 / 1127 queries (96.4%) unique evidence combos=41
+DBN (corrected evidence)  acc=0.813 f1=0.731 log_loss=0.7388 acc@change=0.117 (n=231)
+DBN (legacy/no-target ev) acc=0.684 f1=0.588 log_loss=0.8569
+  [throughput_1] acc=0.971 f1=0.871 prec=0.862 rec=0.882 log_loss=0.2907
+  [throughput_2] acc=0.839 f1=0.725 prec=0.747 rec=0.714 log_loss=0.5715
+  [throughput_3] acc=0.813 f1=0.731 prec=0.740 rec=0.726 log_loss=0.7388
+  [fold 4/5] acc=0.813 f1=0.731 ll=0.7388 (legacy-ev acc=0.684)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'process_cpu_seconds_rate_3', 'throughput_1', 'python_gc_collections_rate_3', 'avg_p_latency_2', 'avg_p_latency_1', 'python_gc_collections_rate_6', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.834 f1=0.803 prec=0.803 rec=0.803
+AR-DBN       acc=0.834 f1=0.803 prec=0.803 rec=0.803 log_loss=0.6734 acc@change=0.000
+Static BN SI acc=0.880 f1=0.770 prec=0.779 rec=0.766 log_loss=0.3815
+PARENTS of target_t1: ['throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.53s  EVAL TIME: 0.01s
+CACHE hits=1087 / 1115 queries (97.5%) unique evidence combos=28
+DBN (corrected evidence)  acc=0.831 f1=0.806 log_loss=0.6469 acc@change=0.054 (n=185)
+DBN (legacy/no-target ev) acc=0.685 f1=0.658 log_loss=1.0317
+  [throughput_1] acc=0.918 f1=0.797 prec=0.810 rec=0.810 log_loss=0.2729
+  [throughput_2] acc=0.865 f1=0.725 prec=0.729 rec=0.722 log_loss=0.5154
+  [throughput_3] acc=0.831 f1=0.806 prec=0.805 rec=0.807 log_loss=0.6469
+  [fold 5/5] acc=0.831 f1=0.806 ll=0.6469 (legacy-ev acc=0.685)
+[OK] target=throughput_3 K= 8 n_bins=  10 fs=mrmr   disc=decision_tree   score=bic folds=5/5 total=41.5s | acc=0.827±0.011 | f1=0.793±0.042 | ll=0.7408±0.0692 | legacy_acc=0.513 | ar_acc=0.823 | si_acc=0.828
+[START] target=throughput_3 K=8 n_bins=  20 fs=mrmr disc=decision_tree score=bic
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'process_cpu_seconds_rate_3', 'throughput_1', 'avg_p_latency_2', 'python_gc_collections_rate_3', 'avg_p_latency_1', 'process_cpu_seconds_rate_2', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.771 f1=0.666 prec=0.666 rec=0.667
+AR-DBN       acc=0.771 f1=0.666 prec=0.666 rec=0.667 log_loss=1.0345 acc@change=0.000
+Static BN SI acc=0.808 f1=0.744 prec=0.773 rec=0.749 log_loss=1.5761
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_3_t']
+TOTAL PARENTS COUNT: 2
+TRAIN TIME: 0.45s  EVAL TIME: 0.01s
+CACHE hits=1029 / 1127 queries (91.3%) unique evidence combos=98
+DBN (corrected evidence)  acc=0.776 f1=0.672 log_loss=0.9698 acc@change=0.070 (n=258)
+DBN (legacy/no-target ev) acc=0.585 f1=0.477 log_loss=1.6800
+  [throughput_1] acc=0.591 f1=0.202 prec=0.160 rec=0.286 log_loss=1.6591
+  [throughput_2] acc=0.422 f1=0.186 prec=0.139 rec=0.318 log_loss=2.0184
+  [throughput_3] acc=0.776 f1=0.672 prec=0.680 rec=0.676 log_loss=0.9698
+  [fold 1/5] acc=0.776 f1=0.672 ll=0.9698 (legacy-ev acc=0.585)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'process_cpu_seconds_rate_3', 'throughput_1', 'python_gc_collections_rate_3', 'avg_p_latency_2', 'avg_p_latency_1', 'python_gc_collections_rate_6', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.702 f1=0.642 prec=0.641 rec=0.642
+AR-DBN       acc=0.702 f1=0.642 prec=0.641 rec=0.642 log_loss=1.0883 acc@change=0.000
+Static BN SI acc=0.800 f1=0.763 prec=0.786 rec=0.765 log_loss=1.0270
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.47s  EVAL TIME: 0.00s
+CACHE hits=1099 / 1115 queries (98.6%) unique evidence combos=16
+DBN (corrected evidence)  acc=0.702 f1=0.642 log_loss=1.0883 acc@change=0.000 (n=332)
+DBN (legacy/no-target ev) acc=0.552 f1=0.496 log_loss=1.4332
+  [throughput_1] acc=0.820 f1=0.782 prec=0.785 rec=0.809 log_loss=0.7650
+  [throughput_2] acc=0.438 f1=0.199 prec=0.164 rec=0.308 log_loss=1.6959
+  [throughput_3] acc=0.702 f1=0.642 prec=0.641 rec=0.642 log_loss=1.0883
+  [fold 2/5] acc=0.702 f1=0.642 ll=1.0883 (legacy-ev acc=0.552)

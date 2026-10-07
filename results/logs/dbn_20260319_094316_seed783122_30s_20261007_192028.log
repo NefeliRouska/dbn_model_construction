@@ -15417,3 +15417,72 @@ DBN (legacy/no-target ev) acc=0.585 f1=0.565 log_loss=1.4605
   [throughput_2] acc=0.567 f1=0.542 prec=0.559 rec=0.561 log_loss=1.4916
   [throughput_3] acc=0.735 f1=0.701 prec=0.701 rec=0.701 log_loss=1.1144
   [fold 4/5] acc=0.735 f1=0.701 ll=1.1144 (legacy-ev acc=0.585)
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+/Users/vic-upf/Claude/Projects/dbn-model-building/.venv/lib/python3.12/site-packages/sklearn/preprocessing/_discretization.py:385: UserWarning: Bins whose width are too small (i.e., <= 1e-8) in feature 0 are removed. Consider decreasing the number of bins.
+  warnings.warn(
+TRAIN_READY COLS: ['throughput_2', 'buffer_size_3', 'process_cpu_seconds_rate_3', 'throughput_1', 'python_gc_collections_rate_3', 'avg_p_latency_2', 'avg_p_latency_1', 'buffer_size_2', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 5604 | pairs train=5603 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.752 f1=0.718 prec=0.718 rec=0.718
+AR-DBN       acc=0.752 f1=0.718 prec=0.718 rec=0.718 log_loss=1.0599 acc@change=0.000
+Static BN SI acc=0.840 f1=0.841 prec=0.862 rec=0.839 log_loss=0.8358
+PARENTS of target_t1: ['throughput_3_t']
+TOTAL PARENTS COUNT: 1
+TRAIN TIME: 0.52s  EVAL TIME: 0.00s
+CACHE hits=1096 / 1115 queries (98.3%) unique evidence combos=19
+DBN (corrected evidence)  acc=0.752 f1=0.718 log_loss=1.0599 acc@change=0.000 (n=277)
+DBN (legacy/no-target ev) acc=0.582 f1=0.547 log_loss=1.5007
+  [throughput_1] acc=0.274 f1=0.257 prec=0.309 rec=0.308 log_loss=2.0026
+  [throughput_2] acc=0.680 f1=0.662 prec=0.688 rec=0.679 log_loss=1.3369
+  [throughput_3] acc=0.752 f1=0.718 prec=0.718 rec=0.718 log_loss=1.0599
+  [fold 5/5] acc=0.752 f1=0.718 ll=1.0599 (legacy-ev acc=0.582)
+[OK] target=throughput_3 K= 8 n_bins=  20 fs=mrmr   disc=decision_tree   score=bic folds=5/5 total=42.0s | acc=0.712±0.033 | f1=0.672±0.039 | ll=1.2067±0.1156 | legacy_acc=0.528 | ar_acc=0.713 | si_acc=0.786
+[START] target=throughput_3 K=8 n_bins=   4 fs=mrmr disc=decision_tree score=aic
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'process_cpu_seconds_rate_3', 'buffer_size_3', 'throughput_1', 'python_gc_collections_rate_3', 'avg_p_latency_2', 'avg_p_latency_1', 'process_cpu_seconds_rate_2', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 1116 | pairs train=1115 test=1127 (of which configuration changes: 93)
+PERSISTENCE  acc=0.900 f1=0.900 prec=0.900 rec=0.900
+AR-DBN       acc=0.900 f1=0.900 prec=0.900 rec=0.900 log_loss=0.4356 acc@change=0.000
+Static BN SI acc=0.836 f1=0.834 prec=0.839 rec=0.843 log_loss=0.7091
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 1.57s  EVAL TIME: 0.01s
+CACHE hits=1066 / 1127 queries (94.6%) unique evidence combos=61
+DBN (corrected evidence)  acc=0.900 f1=0.900 log_loss=0.3524 acc@change=0.000 (n=113)
+DBN (legacy/no-target ev) acc=0.713 f1=0.713 log_loss=1.3269
+  [throughput_1] acc=0.592 f1=0.593 prec=0.662 rec=0.627 log_loss=0.9257
+  [throughput_2] acc=0.637 f1=0.638 prec=0.640 rec=0.664 log_loss=1.0522
+  [throughput_3] acc=0.900 f1=0.900 prec=0.900 rec=0.900 log_loss=0.3524
+  [fold 1/5] acc=0.900 f1=0.900 ll=0.3524 (legacy-ev acc=0.713)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'process_cpu_seconds_rate_3', 'buffer_size_3', 'throughput_1', 'python_gc_collections_rate_3', 'avg_p_latency_2', 'avg_p_latency_1', 'buffer_size_2', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 2244 | pairs train=2243 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.861 f1=0.861 prec=0.861 rec=0.861
+AR-DBN       acc=0.861 f1=0.861 prec=0.861 rec=0.861 log_loss=0.5447 acc@change=0.000
+Static BN SI acc=0.897 f1=0.898 prec=0.908 rec=0.894 log_loss=0.3625
+PARENTS of target_t1: ['data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 3
+TRAIN TIME: 1.73s  EVAL TIME: 0.01s
+CACHE hits=1044 / 1115 queries (93.6%) unique evidence combos=71
+DBN (corrected evidence)  acc=0.861 f1=0.861 log_loss=0.4610 acc@change=0.000 (n=155)
+DBN (legacy/no-target ev) acc=0.569 f1=0.568 log_loss=0.8963
+  [throughput_1] acc=0.791 f1=0.781 prec=0.852 rec=0.797 log_loss=0.3320
+  [throughput_2] acc=0.731 f1=0.727 prec=0.731 rec=0.735 log_loss=0.7380
+  [throughput_3] acc=0.861 f1=0.861 prec=0.861 rec=0.861 log_loss=0.4610
+  [fold 2/5] acc=0.861 f1=0.861 ll=0.4610 (legacy-ev acc=0.569)
+WARNING:pgmpy:Replacing existing CPD for throughput_3_t1
+TRAIN_READY COLS: ['throughput_2', 'avg_p_latency_3', 'buffer_size_3', 'throughput_1', 'process_cpu_seconds_rate_3', 'python_gc_collections_rate_3', 'avg_p_latency_1', 'process_cpu_seconds_rate_2', 'throughput_3', 'cores_1', 'cores_2', 'cores_3', 'data_quality_1', 'data_quality_2', 'data_quality_3', 'rps']
+TRAIN_READY LEN: 3360 | pairs train=3359 test=1115 (of which configuration changes: 92)
+PERSISTENCE  acc=0.899 f1=0.898 prec=0.898 rec=0.898
+AR-DBN       acc=0.899 f1=0.898 prec=0.898 rec=0.898 log_loss=0.4386 acc@change=0.000
+Static BN SI acc=0.964 f1=0.963 prec=0.962 rec=0.967 log_loss=0.2012
+PARENTS of target_t1: ['avg_p_latency_3_t', 'data_quality_1_t1', 'throughput_2_t', 'throughput_3_t']
+TOTAL PARENTS COUNT: 4
+TRAIN TIME: 2.02s  EVAL TIME: 0.02s
+CACHE hits=1000 / 1115 queries (89.7%) unique evidence combos=115
+DBN (corrected evidence)  acc=0.899 f1=0.898 log_loss=0.3905 acc@change=0.000 (n=113)
+DBN (legacy/no-target ev) acc=0.120 f1=0.126 log_loss=1.4119
+  [throughput_1] acc=0.860 f1=0.856 prec=0.880 rec=0.875 log_loss=0.2333
+  [throughput_2] acc=0.738 f1=0.734 prec=0.734 rec=0.739 log_loss=0.7914
+  [throughput_3] acc=0.899 f1=0.898 prec=0.898 rec=0.898 log_loss=0.3905
+  [fold 3/5] acc=0.899 f1=0.898 ll=0.3905 (legacy-ev acc=0.120)

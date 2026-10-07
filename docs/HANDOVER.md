@@ -213,6 +213,7 @@ Outputs are in `results/ablation/` and `results/tabpfn/` unless stated.
 | 29 | `whatif_study.py --tabpfn v2` | all | part 2 §3 | TabPFN v2 does not generalise to unseen configurations for services 2 and 3 (0.41 against 0.73) |
 | 30 | `tabpfn_baseline.py` rerun (TabPFN v2) with the recommended DBN on the same test samples | all | part 2 §11 | DBN ahead in accuracy in all four settings (+0.012 to +0.041), level or ahead in MAE |
 | 31 | Per-service detectors; recommended configuration with pooled training | all | part 2 §9, §5 | service-1 detector finds an unseen service-1 regime in 98% of runs within ~13 s; pooled training 0.928 against AR 0.876 |
+| 32 | Corrected `dbn_sweep.py` at 30 s, bins 4 / 10 / 20: 383 of 1 080 configurations (stopped; full grid for the other machine) | all | part 2 §13, `results/sweeps/dbn_k_sweep_partial_30s_from_logs_20261007.csv` | no failed fold; level with AR at 30 s (+0.001 to +0.004) |
 | — | TabPFN v3.5 | — | part 2 §6 | **not run**: Prior Labs licence key missing on this machine |
 
 Not re-run: the full 360-configuration sweep (about 20 hours per dataset at
@@ -255,8 +256,12 @@ Newest first.
 - `adaptation_study.py`: sequential detector (CUSUM) with time to alarm.
   `analysis/make_figures.py` writes the report figures to `docs/figures/`.
   `scripts/run_long_jobs.sh` holds the jobs for the other machine.
-- Corrected `dbn_sweep.py` started at 30 s (bins 4 / 10 / 20, full grid) on the
-  three datasets; logs in `results/logs/dbn_*_30s_*.log`.
+- Corrected `dbn_sweep.py` run at 30 s (bins 4 / 10 / 20) on the three
+  datasets and stopped after 383 of 1 080 configurations (test 32); logs in
+  `results/logs/dbn_*_30s_*.log`. The sweep only writes its result CSV at the
+  end, so the table of the completed configurations was rebuilt from the logs.
+- Per-service detectors, pooled training of the recommended model (test 31);
+  recommended DBN scored on TabPFN's test samples (test 30).
 
 ### 2026-10-07 (third pass, evening)
 

@@ -437,6 +437,35 @@ be run.
   +0.014 to +0.020, best at 0.02. It stays behind the discrete searches at
   every setting.
 
+## 13. The corrected pgmpy sweep at 30 s (partial)
+
+`dbn_sweep.py --granularity 30 --n-bins 4 10 20` was started on the three
+datasets and stopped after 383 of the 1 080 configurations (all of K = 4 and
+most of K = 8), because the rest would have taken about five more hours; the
+full grid is in `scripts/run_long_jobs.sh` for the other machine. The numbers
+below are read from the logs
+(`results/sweeps/dbn_k_sweep_partial_30s_from_logs_20261007.csv`).
+
+| Bins | Score | DBN accuracy | AR accuracy | Gain | Share of configurations above AR |
+|---|---|---|---|---|---|
+| 4 | AIC | 0.913 | 0.911 | +0.002 | 68% |
+| 4 | BIC | 0.913 | 0.910 | +0.002 | 75% |
+| 10 | AIC | 0.852 | 0.848 | +0.004 | 95% |
+| 10 | BIC | 0.848 | 0.847 | +0.001 | 40% |
+| 20 | AIC | 0.778 | 0.774 | +0.004 | 71% |
+| 20 | BIC | 0.774 | 0.773 | +0.001 | 67% |
+
+- No fold failed in any of the 383 configurations (the old logs had failures
+  in every run).
+- At 30 s the sweep is level with AR, never clearly below it as before
+  (largest loss −0.007, largest gain +0.018). This agrees with the harness:
+  at 30 s there is nothing to gain inside a run, and the gain at
+  reconfigurations needs the chain / capacity inference of §4, which the
+  sweep does not have. The sweep's own gain is at 1 s (0.912 against 0.887 on
+  the small grid of the first report).
+- The discretiser changes the level of both models (uniform ≈ 0.89, quantile ≈
+  0.80, with different bins) but not the gap.
+
 ## 8. Open
 
 - Detection: per-service or weighted combinations of node surprises; a
