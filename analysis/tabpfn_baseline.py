@@ -9,6 +9,11 @@ the same bins:
     persistence        y(t+h) = y(t)
     ar                 P(bin' | bin)                      -- table on the target's bins
     model              the DBN configuration under test   -- dbn/ablation.py
+    dbn_rec            the recommended DBN configuration (two lags, parents limited
+                       to the service and its input, capacity node, capacity chain
+                       at reconfigurations)
+    dbn_rec_median     the same model with its conditional-median node as the
+                       continuous forecast (same bin probabilities)
     tabpfn             TabPFNRegressor on the continuous candidates, predicting
                        the change y(t+h) - y(t); its predictive distribution is
                        integrated over the bins to get P(bin') (with a continuity
@@ -44,6 +49,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dbn"))
 import ablation as A  # noqa: E402
 
 RESULTS_DIR = A.REPO_ROOT / "results" / "tabpfn"
+
+RECOMMENDED = dict(ar_order=2, other_lags=2, pool="local", capacity=True, on_change="capchain",
+                   numeric=True)
 
 # (granularity, horizon, n_bins) settings to compare on
 SETTINGS = [(1, 1, 20), (1, 1, 50), (1, 1, 10), (1, 5, 20), (30, 1, 20), (30, 1, 4)]
@@ -162,6 +170,14 @@ def main():
                 extra.append(("tabpfn_clf", T.classifier))
             t0 = time.perf_counter()
             res, info = A.run_fold(S, cfg, tr, te_sub, extra)
+            # the recommended configuration on the same test samples (its frame has
+            # the capacity columns; samples are built in the same order)
+            rec = A.make_cfg(granularity=gran, horizon=horizon, n_bins=n_bins, **RECOMMENDED)
+            S_rec = A.get_samples(args.csv, rec)
+            assert len(S_rec.run) == len(S.run) and np.array_equal(S_rec.j, S.j)
+            res_rec, _ = A.run_fold(S_rec, rec, tr, te_sub)
+            res["dbn_rec"] = res_rec["model"]
+            res["dbn_rec_median"] = res_rec["cg_median"]
             for model, (summ, table) in res.items():
                 rows.append({"setting": setting, "granularity": gran, "horizon": horizon,
                              "n_bins": n_bins, "model": model, "fold": fi + 1,

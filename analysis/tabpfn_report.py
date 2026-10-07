@@ -19,7 +19,6 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "dbn"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ablation as A  # noqa: E402
-from ablation_report import newest  # noqa: E402
 
 RESULTS_DIR = A.REPO_ROOT / "results" / "tabpfn"
 
@@ -30,13 +29,20 @@ def main():
     args = ap.parse_args()
     study = f"tabpfn-{args.version}"
 
+    # every run file of this version; for a (dataset, setting) that was run more
+    # than once, the newest run counts
+    import glob
     runs = []
-    for dataset, f in newest(study, "runs.csv.gz", RESULTS_DIR).items():
+    for f in sorted(glob.glob(str(RESULTS_DIR / f"{study}_*_runs.csv.gz"))):
+        dataset = Path(f).name[len(study) + 1:].split("_run")[0]
         d = pd.read_csv(f)
         d["run_id"] = dataset + ":" + d["run_id"].astype(str)
         d["dataset"] = dataset
+        d["file"] = Path(f).name
         runs.append(d)
     runs = pd.concat(runs, ignore_index=True)
+    latest = runs.groupby(["dataset", "config"])["file"].transform("max")
+    runs = runs[runs["file"] == latest].drop(columns="file")
 
     g = runs.groupby(["config", "model"])
     table = pd.DataFrame({
@@ -53,9 +59,10 @@ def main():
     rows = []
     for setting in table.setting.unique():
         r = runs[runs.config == setting]
-        for other in sorted(set(r.model) - {"model"}):
-            cmp = A.compare_to_reference(r, setting, "model", setting, other, n_boot=10000)
-            rows.append({"setting": setting, "dbn_minus": other, **cmp})
+        for dbn in [m for m in ("model", "dbn_rec", "dbn_rec_median") if m in set(r.model)]:
+            for other in sorted(set(r.model) - {"model", "dbn_rec", "dbn_rec_median"}):
+                cmp = A.compare_to_reference(r, setting, dbn, setting, other, n_boot=10000)
+                rows.append({"setting": setting, "dbn": dbn, "dbn_minus": other, **cmp})
     diffs = pd.DataFrame(rows)
 
     table.to_csv(RESULTS_DIR / f"summary_{study}.csv", index=False)
@@ -64,7 +71,7 @@ def main():
                            "display.float_format", lambda v: f"{v:.4f}"):
         print(table.to_string(index=False))
         print()
-        print(diffs[["setting", "dbn_minus", "n_runs", "d_acc", "d_acc_lo", "d_acc_hi", "p_acc",
+        print(diffs[["setting", "dbn", "dbn_minus", "n_runs", "d_acc", "d_acc_lo", "d_acc_hi", "p_acc",
                      "d_logloss", "d_logloss_lo", "d_logloss_hi", "d_maeh", "d_maeh_lo", "d_maeh_hi"]]
               .to_string(index=False))
 

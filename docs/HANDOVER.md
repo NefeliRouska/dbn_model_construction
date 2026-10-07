@@ -211,6 +211,7 @@ Outputs are in `results/ablation/` and `results/tabpfn/` unless stated.
 | 27 | `ablation.py --study recommended`: recommended configuration for all eight variables, with numeric read-outs | all | part 2 §11 | every variable beats AR; conditional-median MAE below persistence for 7 of 8 |
 | 28 | `ablation.py --study extras`: slow level variable in the one-step model; DYNOTEARS penalty | all | part 2 §12 | level: only helps at 5–10 s; DYNOTEARS best at λ = 0.02, still behind |
 | 29 | `whatif_study.py --tabpfn v2` | all | part 2 §3 | TabPFN v2 does not generalise to unseen configurations for services 2 and 3 (0.41 against 0.73) |
+| 30 | `tabpfn_baseline.py` rerun (TabPFN v2) with the recommended DBN on the same test samples | all | part 2 §11 | DBN ahead in accuracy in all four settings (+0.012 to +0.041), level or ahead in MAE |
 | — | TabPFN v3.5 | — | part 2 §6 | **not run**: Prior Labs licence key missing on this machine |
 
 Not re-run: the full 360-configuration sweep (about 20 hours per dataset at

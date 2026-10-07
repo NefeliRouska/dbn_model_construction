@@ -40,8 +40,9 @@ target is `throughput_3`, 1 s, 20 bins, two lags, unless stated.
    limited to the variable's service and its input, capacity node, capacity
    chain at reconfigurations, conditional-median read-out. For `throughput_3`:
    accuracy 0.922 against AR 0.875 at 1 s; MAE 3.94 requests/s against 4.65 for
-   persistence (gradient boosting 4.23, TabPFN v2 3.92 on its subsample). At
-   30 s: MAE 10.4 against 17.6 for persistence and 11.3 for TabPFN v2.
+   persistence. On identical test samples it is ahead of TabPFN v2 in accuracy
+   (0.922 against 0.902 at 1 s; 0.889 against 0.848 at 30 s, 20 bins) and level
+   or slightly ahead in MAE (3.72 against 3.92; 10.4 against 11.3).
 
 ---
 
@@ -382,6 +383,27 @@ accuracy 0.959 / 0.926 / 0.889 with 4 / 10 / 20 bins (AR 0.920 / 0.880 /
 The queue lengths are the one family where a linear node does better than the
 median: a queue grows or shrinks by (input − output) every second, which is
 linear.
+
+### Recommended DBN against TabPFN v2, same test samples
+
+`analysis/tabpfn_baseline.py` now also scores the recommended configuration
+(`dbn_rec`, and `dbn_rec_median` for its numeric forecast) on exactly the
+samples TabPFN is tested on. Pooled over the three datasets; differences are
+DBN minus TabPFN with 95% intervals over runs.
+
+| Setting | Accuracy: DBN / TabPFN v2 | Difference | Log-loss: DBN / TabPFN v2 | MAE: DBN median / TabPFN v2 | Difference |
+|---|---|---|---|---|---|
+| 1 s, 20 bins | **0.922** / 0.902 | +0.021 [0.015, 0.026] | **0.270** / 0.387 | 3.72 / 3.92 | −0.21 [−0.45, +0.03] |
+| 1 s, 50 bins | **0.878** / 0.855 | +0.023 [0.017, 0.030] | **0.413** / 0.572 | 3.75 / 3.92 | −0.17 [−0.48, +0.19] |
+| 30 s, 20 bins | **0.889** / 0.848 | +0.041 [0.032, 0.050] | 0.614 / **0.573** | **10.4** / 11.3 | −0.87 [−1.73, −0.03] |
+| 30 s, 4 bins | **0.959** / 0.947 | +0.012 [0.007, 0.018] | 0.167 / 0.171 | 11.2 / 11.3 | −0.07 [−0.89, +0.71] |
+
+(gradient boosting: accuracy 0.893 / 0.832 / 0.828 / 0.934, MAE 4.13 at 1 s and
+13.5 at 30 s.) With the recommended configuration the DBN is ahead of TabPFN
+v2 in bin accuracy in all four settings and level with it, or slightly ahead,
+as a numeric forecast. This replaces the comparison in §7 of the first report,
+where the DBN was the earlier reference configuration. TabPFN v3.5 remains to
+be run.
 
 ## 12. Smaller tests
 
