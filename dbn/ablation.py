@@ -103,6 +103,22 @@ LEVEL_ALPHA = 0.1
 EXPERT_CHAIN = ("y@t", "throughput_2@t", "buffer_size_3@t", "cores_3@t+h", "data_quality_3@t+h")
 
 
+# The configuration recommended after all studies, and the variables it is used
+# for. study_recommended SCORES it (cross-validation, one variable at a time);
+# build_model.py FITS it on all the data and saves the result as one model.
+# Both go through recommended_cfg, so they cannot drift apart.
+RECOMMENDED = dict(ar_order=2, other_lags=2, pool="local", capacity=True, on_change="capchain",
+                   numeric=True)
+SYSTEM_VARIABLES = ("throughput_1", "throughput_2", "throughput_3", "avg_p_latency_1",
+                    "avg_p_latency_2", "avg_p_latency_3", "buffer_size_2", "buffer_size_3")
+
+
+def recommended_cfg(target, **overrides):
+    """RECOMMENDED for one variable. Queue lengths are mostly zero: quantile bins for them."""
+    disc = "quantile" if target.startswith("buffer") else "uniform"
+    return make_cfg(**{"target": target, "disc": disc, **RECOMMENDED, **overrides})
+
+
 def cfg_id(cfg):
     """Short string listing every option that differs from DEFAULTS."""
     diff = {k: v for k, v in cfg.items() if DEFAULTS.get(k) != v}
@@ -1092,15 +1108,12 @@ def study_capacity():
 
 def study_recommended():
     """The configuration recommended after all studies, for every target, with continuous read-outs."""
-    rec = dict(ar_order=2, other_lags=2, pool="local", capacity=True, on_change="capchain", numeric=True)
     c = []
-    for v in ("throughput_1", "throughput_2", "throughput_3", "avg_p_latency_1", "avg_p_latency_2",
-              "avg_p_latency_3", "buffer_size_2", "buffer_size_3"):
-        disc = "quantile" if v.startswith("buffer") else "uniform"
+    for v in SYSTEM_VARIABLES:
         for nb in (20, 50):
-            c.append(make_cfg(target=v, n_bins=nb, disc=disc, **rec))
+            c.append(recommended_cfg(v, n_bins=nb))
     for nb in (4, 10, 20):
-        c.append(make_cfg(granularity=30, n_bins=nb, **rec))
+        c.append(recommended_cfg("throughput_3", granularity=30, n_bins=nb))
     return c
 
 

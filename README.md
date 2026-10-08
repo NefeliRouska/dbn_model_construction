@@ -22,6 +22,7 @@ holds the modelling code, its results, and its git history.
 | `dbn/ablation.py` | Fast harness for every modelling option of the target's transition model (bins, granularity, horizon, length of the state, structure-learning engine, table prior, exogenous inputs, ...). Stores per-run results for paired significance tests. `--check-pgmpy` verifies it against pgmpy. |
 | `dbn/dynotears.py` | DYNOTEARS structure learning (own implementation; causalnex does not install on Python 3.12). |
 | `dbn/memory_ablation.py` | Memory ablation (lags, control flag, velocity features) on top of `dbn_sweep`. |
+| `dbn/build_model.py` | Fits the recommended configuration on all runs for every variable (3 throughputs, 3 latencies, 2 queues) and saves one model with a `predict()`; `--check` verifies it against `ablation.py`. Start from its header. |
 | `dbn/joint_dbn.py` | Single joint DBN for all three throughput targets (not updated since April 2026; still reads a hard-coded path). |
 | `analysis/ablation_report.py` | Effect size and run-level bootstrap significance of every configuration of an `ablation.py` study, pooled over datasets. |
 | `analysis/tabpfn_baseline.py`, `analysis/tabpfn_report.py` | DBN versus TabPFN (and gradient boosting) on identical inputs, folds and test samples; pooled summary with paired intervals. |
