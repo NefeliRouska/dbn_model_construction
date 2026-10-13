@@ -1,0 +1,16 @@
+nohup: ignoring input
+Traceback (most recent call last):
+  File "/home/nero/Downloads/dbn_model_construction/analysis/tabpfn_baseline.py", line 240, in <module>
+    main()
+  File "/home/nero/Downloads/dbn_model_construction/analysis/tabpfn_baseline.py", line 200, in main
+    res, info = A.run_fold(S, cfg, tr, te_sub, extra)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/dbn/ablation.py", line 923, in run_fold
+    res = fn(S, cfg, tr, te, binner, cands, parents)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/analysis/tabpfn_baseline.py", line 129, in all_candidates
+    return self._to_bins(self._regress(S, tr, te, cands), S, te, binner)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/analysis/tabpfn_baseline.py", line 87, in _regress
+    from tabpfn import TabPFNRegressor
+ModuleNotFoundError: No module named 'tabpfn'

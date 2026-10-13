@@ -1,0 +1,44 @@
+nohup: ignoring input
+Traceback (most recent call last):
+  File "/home/nero/Downloads/dbn_model_construction/analysis/tabpfn_baseline.py", line 240, in <module>
+    main()
+  File "/home/nero/Downloads/dbn_model_construction/analysis/tabpfn_baseline.py", line 200, in main
+    res, info = A.run_fold(S, cfg, tr, te_sub, extra)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/dbn/ablation.py", line 923, in run_fold
+    res = fn(S, cfg, tr, te, binner, cands, parents)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/analysis/tabpfn_baseline.py", line 129, in all_candidates
+    return self._to_bins(self._regress(S, tr, te, cands), S, te, binner)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/analysis/tabpfn_baseline.py", line 92, in _regress
+    m.fit(X[ctx], (S.y1 - S.y0)[ctx])
+  File "/usr/lib/python3.12/contextlib.py", line 81, in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/.venv/lib/python3.12/site-packages/tabpfn/regressor.py", line 1313, in fit
+    byte_size = self._initialize_model_variables()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/.venv/lib/python3.12/site-packages/tabpfn/regressor.py", line 798, in _initialize_model_variables
+    return initialize_model_variables_helper(self, self.estimator_type)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nero/Downloads/dbn_model_construction/.venv/lib/python3.12/site-packages/tabpfn/base.py", line 523, in initialize_model_variables_helper
+    initialize_tabpfn_model(
+  File "/home/nero/Downloads/dbn_model_construction/.venv/lib/python3.12/site-packages/tabpfn/base.py", line 221, in initialize_tabpfn_model
+    load_model_criterion_config(
+  File "/home/nero/Downloads/dbn_model_construction/.venv/lib/python3.12/site-packages/tabpfn/model_loading.py", line 759, in load_model_criterion_config
+    raise res[0]
+  File "/home/nero/Downloads/dbn_model_construction/.venv/lib/python3.12/site-packages/tabpfn/model_loading.py", line 569, in _download_model
+    ensure_license_accepted(hf_repo_id=_HF_REPOS[version])
+  File "/home/nero/Downloads/dbn_model_construction/.venv/lib/python3.12/site-packages/tabpfn/browser_auth.py", line 621, in ensure_license_accepted
+    raise TabPFNLicenseError(
+tabpfn.errors.TabPFNLicenseError: TabPFN requires a one-time license acceptance to download
+model weights for local inference, but no interactive terminal
+is available.
+
+To authenticate in a non-interactive environment:
+  1. Open https://ux.priorlabs.ai in a browser and log in (or register)
+  2. Accept the license on the Licenses tab
+  3. Copy your API Key from https://ux.priorlabs.ai/account
+  4. Set the environment variable: export TABPFN_TOKEN="<your-api-key>"
+     or in Python (before calling .fit()): import os; os.environ["TABPFN_TOKEN"] = "<your-api-key>"
