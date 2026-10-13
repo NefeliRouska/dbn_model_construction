@@ -1,0 +1,34 @@
+nohup: ignoring input
+
+=== round: choose on once-in-a-lifetime + unpredictable, score on periodic
+    pass 1: ar_order 1 -> 3  (acc 0.9039 -> 0.9042)
+    pass 1: other_lags 1 -> 3  (acc 0.9042 -> 0.9163)
+    pass 1: pool core -> local  (acc 0.9163 -> 0.9189)
+    pass 1: max_parents 4 -> 6  (acc 0.9189 -> 0.9191)
+    pass 1: reconf same -> capchain  (acc 0.9191 -> 0.9203)
+    pass 2: ar_order 3 -> 2  (acc 0.9203 -> 0.9205)
+    pass 2: max_parents 6 -> 4  (acc 0.9205 -> 0.9207)
+    chosen: ar_order=2, other_lags=3, velocity=none, pool=local, engine=cv-forward, prior=backoff, max_parents=4, reconf=capchain
+    on periodic: chosen acc=0.9294 (AR 0.8873, gain +0.0421 [+0.0345, +0.0501])  |  recommended acc=0.9265
+
+=== round: choose on periodic + unpredictable, score on once-in-a-lifetime
+    pass 1: other_lags 1 -> 3  (acc 0.9073 -> 0.9191)
+    pass 1: pool core -> local  (acc 0.9191 -> 0.9224)
+    pass 1: reconf same -> capchain  (acc 0.9224 -> 0.9236)
+    pass 2: ar_order 1 -> 2  (acc 0.9236 -> 0.9239)
+    pass 2: max_parents 4 -> 6  (acc 0.9239 -> 0.9245)
+    chosen: ar_order=2, other_lags=3, velocity=none, pool=local, engine=cv-forward, prior=backoff, max_parents=6, reconf=capchain
+    on once-in-a-lifetime: chosen acc=0.9221 (AR 0.8723, gain +0.0498 [+0.0412, +0.0590])  |  recommended acc=0.9237
+
+=== round: choose on periodic + once-in-a-lifetime, score on unpredictable
+    pass 1: ar_order 1 -> 3  (acc 0.9121 -> 0.9131)
+    pass 1: other_lags 1 -> 3  (acc 0.9131 -> 0.9211)
+    pass 1: pool core -> local  (acc 0.9211 -> 0.9242)
+    pass 1: max_parents 4 -> 6  (acc 0.9242 -> 0.9245)
+    pass 1: reconf same -> capchain  (acc 0.9245 -> 0.9259)
+    pass 2: ar_order 3 -> 2  (acc 0.9259 -> 0.9261)
+    chosen: ar_order=2, other_lags=3, velocity=none, pool=local, engine=cv-forward, prior=backoff, max_parents=6, reconf=capchain
+    on unpredictable: chosen acc=0.9189 (AR 0.8656, gain +0.0533 [+0.0435, +0.0638])  |  recommended acc=0.9163
+
+Saved /home/nero/Downloads/dbn_model_construction/results/heldout/heldout_throughput_3_run20261013_141706_gf4a8179.csv
+      /home/nero/Downloads/dbn_model_construction/results/heldout/heldout_throughput_3_run20261013_141706_gf4a8179_trace.csv

@@ -1,0 +1,34 @@
+nohup: ignoring input
+[20260313_192652_seed783122 fold 1] test rows 1128, unseen configuration: 99%
+[20260313_192652_seed783122 fold 2] test rows 1116, unseen configuration: 97%
+[20260313_192652_seed783122 fold 3] test rows 1116, unseen configuration: 95%
+[20260313_192652_seed783122 fold 4] test rows 1128, unseen configuration: 82%
+[20260313_192652_seed783122 fold 5] test rows 1116, unseen configuration: 88%
+[20260316_105011_seed783122 fold 1] test rows 1128, unseen configuration: 99%
+[20260316_105011_seed783122 fold 2] test rows 1116, unseen configuration: 97%
+[20260316_105011_seed783122 fold 3] test rows 1116, unseen configuration: 95%
+[20260316_105011_seed783122 fold 4] test rows 1128, unseen configuration: 82%
+[20260316_105011_seed783122 fold 5] test rows 1116, unseen configuration: 88%
+[20260319_094316_seed783122 fold 1] test rows 1128, unseen configuration: 99%
+[20260319_094316_seed783122 fold 2] test rows 1116, unseen configuration: 97%
+[20260319_094316_seed783122 fold 3] test rows 1116, unseen configuration: 95%
+[20260319_094316_seed783122 fold 4] test rows 1128, unseen configuration: 82%
+[20260319_094316_seed783122 fold 5] test rows 1116, unseen configuration: 88%
+
+== unseen configurations only, pooled over the datasets given ==
+      target                           model   acc    mae         n
+throughput_1           boosting (capacities) 0.924  2.312 15480.000
+throughput_1 capacity chain, noisy-min prior 0.877  6.015 15480.000
+throughput_1        tabpfn v3.5 (capacities) 0.957  1.195 15480.000
+throughput_1    tabpfn v3.5 (cores, quality) 0.931  1.808 15480.000
+throughput_2           boosting (capacities) 0.647 25.130 15480.000
+throughput_2 capacity chain, noisy-min prior 0.752 27.593 15480.000
+throughput_2        tabpfn v3.5 (capacities) 0.772 20.618 15480.000
+throughput_2    tabpfn v3.5 (cores, quality) 0.673 25.204 15480.000
+throughput_3           boosting (capacities) 0.572 33.028 15480.000
+throughput_3 capacity chain, noisy-min prior 0.729 34.231 15480.000
+throughput_3        tabpfn v3.5 (capacities) 0.682 28.699 15480.000
+throughput_3    tabpfn v3.5 (cores, quality) 0.581 32.800 15480.000
+
+Saved /home/nero/Downloads/dbn_model_construction/results/whatif_capacity/whatif_capacity_v3.5_run20261013_141648_gf4a8179_runs.csv.gz
+      /home/nero/Downloads/dbn_model_construction/results/whatif_capacity/whatif_capacity_v3.5_run20261013_141648_gf4a8179_summary_unseen.csv
