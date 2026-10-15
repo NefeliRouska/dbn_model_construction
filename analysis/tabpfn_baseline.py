@@ -8,13 +8,17 @@ they are given; compare inside a group:
   reference inputs    one value of every service metric at t, controls and load
                       at t+h (the candidate columns of the reference DBN)
                           model, tabpfn, tabpfn_parents, tabpfn_clf, hgb, hgb_ctx
-  recommended inputs  the candidate columns of the recommended DBN: the target's
-                      own service and its input flow at t and t-1, its controls,
-                      the load, and the learned capacity at t+h
-                          dbn_rec, dbn_rec_median, tabpfn_rec
-  rich inputs         every service metric at t and t-1, all controls, the load
-                      and the three capacities (the most TabPFN can be given)
-                          dbn_rich, dbn_rich_median, tabpfn_rich
+  recommended inputs  everything the recommended DBN can read (A.information_columns):
+                      the target's own service and its input flow at t and t-1, its
+                      settings and capacity at t+h, and what the capacity chain reads
+                      (the load at t, the capacity of every service up to the target
+                      at t+h). TabPFN and gradient boosting get exactly these columns.
+                          dbn_rec, dbn_rec_median, tabpfn_rec, hgb_rec
+  rich inputs         every service metric at t and t-1, all settings and the three
+                      capacities at t+h, the load at t (the most TabPFN can be given)
+                          dbn_rich, dbn_rich_median, tabpfn_rich, hgb_rich
+  No model is given the load of the predicted step (A.DEFAULTS: exog="controls",
+  chain_load="t").
   (ar and persistence only use the target's current value)
 
     persistence        y(t+h) = y(t)
@@ -61,8 +65,7 @@ import ablation as A  # noqa: E402
 
 RESULTS_DIR = A.REPO_ROOT / "results" / "tabpfn"
 
-RECOMMENDED = dict(ar_order=2, other_lags=2, pool="local", capacity=True, on_change="capchain",
-                   numeric=True)
+RECOMMENDED = A.RECOMMENDED
 RICH = dict(ar_order=2, other_lags=2, pool="core", capacity=True, on_change="capchain", numeric=True)
 
 # (granularity, horizon, n_bins) settings to compare on
@@ -210,12 +213,18 @@ def main():
                 c2 = A.make_cfg(granularity=gran, horizon=horizon, n_bins=n_bins, **opts)
                 S2 = A.get_samples(args.csv, c2)
                 assert len(S2.run) == len(S.run) and np.array_equal(S2.j, S.j)
-                r2, i2 = A.run_fold(S2, c2, tr, te_sub, [(f"tabpfn_{group}", T.all_candidates)])
+                info_cols = A.information_columns(S2, c2)
+                same = [(f"tabpfn_{group}", lambda S_, c_, a, b, bn, _c, p: T.all_candidates(
+                            S_, c_, a, b, bn, info_cols, p)),
+                        (f"hgb_{group}", lambda S_, c_, a, b, bn, _c, p: A.hgb_model(
+                            S_, c_, a, b, bn, info_cols))]
+                r2, i2 = A.run_fold(S2, c2, tr, te_sub, same)
                 res[f"dbn_{group}"] = r2["model"]
                 res[f"dbn_{group}_median"] = r2["cg_median"]
                 res[f"tabpfn_{group}"] = r2[f"tabpfn_{group}"]
+                res[f"hgb_{group}"] = r2[f"hgb_{group}"]
                 parents_of.update({f"dbn_{group}": i2["parents"], f"dbn_{group}_median": i2["parents"],
-                                   f"tabpfn_{group}": A.candidate_columns(S2, c2)})
+                                   f"tabpfn_{group}": info_cols, f"hgb_{group}": info_cols})
             info = {"parents": [], "mae_persistence_continuous": float(np.abs(S.y0[te_sub] - S.y1[te_sub]).mean())}
             for model, (summ, table) in res.items():
                 rows.append({"setting": setting, "granularity": gran, "horizon": horizon,

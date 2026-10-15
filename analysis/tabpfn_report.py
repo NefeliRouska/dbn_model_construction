@@ -56,7 +56,7 @@ def main():
         "acc_change": g["correct_change"].sum() / g["n_change"].sum(),
     }).reset_index().rename(columns={"config": "setting"})
     # hgb gives a point forecast: its log-loss is not a probabilistic score
-    table.loc[table.model.isin(["hgb", "hgb_ctx", "persistence"]), "logloss"] = float("nan")
+    table.loc[table.model.str.startswith("hgb") | (table.model == "persistence"), "logloss"] = float("nan")
 
     rows = []
     for setting in table.setting.unique():

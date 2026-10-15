@@ -49,6 +49,9 @@ if [ "$WHAT" = studies ] || [ "$WHAT" = all ]; then
   done
   $PY analysis/ablation_report.py --study ofat > /dev/null
   $PY analysis/ablation_report.py --study constraints > /dev/null
+  # sensitivity: the recommended model with the next-step load given, against the recommended model
+  $PY analysis/ablation_report.py --study chain_load \
+    --ref-config "ar_order=2,capacity=True,numeric=True,on_change=capchain,other_lags=2,pool=local" > /dev/null
 fi
 
 if [ "$WHAT" = tabpfn ] || [ "$WHAT" = all ]; then

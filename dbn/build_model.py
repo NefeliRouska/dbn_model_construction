@@ -347,8 +347,11 @@ class Node:
                             (2, A.noisy_min_table(K)))
             else:
                 cpt = A.CPT([k for k, _ in par], [n for _, n in par], y, K, "bdeu", cfg["ess"])
-            stages.append(dict(service=i, up=up, ctrl=ctrl, cpt=cpt, noisy_min=noisy_min,
-                               enc={col: encoder_of(binner, S, col) for col in [up] + ctrl}))
+            # the table is learned on the load of the same instant; it is queried with the
+            # current load when chain_load="t" (the load of the predicted step is not known)
+            query = f"{D.LOAD_COL}@t" if i == 1 and cfg["chain_load"] == "t" else up
+            stages.append(dict(service=i, up=up, query=query, ctrl=ctrl, cpt=cpt, noisy_min=noisy_min,
+                               enc={col: encoder_of(binner, S, col) for col in [up, query] + ctrl}))
         return stages
 
     # ---- prediction ----
@@ -356,7 +359,7 @@ class Node:
         cols = set(self.parents) | {f"{self.target}@t"}
         for k, st in enumerate(self.chain or []):
             # only the load is read; the upstream throughputs at t+h are summed out
-            cols |= set(st["ctrl"]) | ({st["up"]} if k == 0 else set())
+            cols |= set(st["ctrl"]) | ({st["query"]} if k == 0 else set())
         return sorted(cols)
 
     def _predict_chain(self, inputs, rows):
@@ -369,7 +372,7 @@ class Node:
                 codes = [up_code] + ctrl + ([np.minimum(up_code, ctrl[0])] if st["noisy_min"] else [])
                 return st["cpt"].predict(codes, n)
             if P_up is None:                               # the load is observed
-                P_up = table(encode(st["enc"][st["up"]], inputs[st["up"]][rows]))
+                P_up = table(encode(st["enc"][st["query"]], inputs[st["query"]][rows]))
             else:                                          # sum over the unobserved upstream flow
                 P_up = sum(P_up[:, [s]] * table(np.full(n, s)) for s in range(K))
         return P_up

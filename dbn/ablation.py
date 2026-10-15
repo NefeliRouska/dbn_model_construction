@@ -66,7 +66,9 @@ DEFAULTS = dict(
     other_lags=1,           # slices of the other variables available (1 = only @t)
     velocity="none",        # none | sign | binned   (v@t - v@t-1 of every variable)
     relative=False,         # add v@t - y@t for the upstream throughputs and the load
-    exog="controls+load",   # none | controls | controls+load   (values at t+h)
+    exog="controls",        # none | controls | controls+load   (values at t+h). The load of the
+                            # predicted step is not known to a controller in deployment, so by
+                            # default only the settings (cores, data quality, capacity) are
     level=False,            # add level_<throughput>: its exponential moving average (weight
                             # LEVEL_ALPHA on the newest row), a slow state variable
     capacity=False,         # add capacity_i = cores_i x rate(data_quality_i) as exogenous
@@ -95,6 +97,9 @@ DEFAULTS = dict(
                             # new configuration | chain: inference in the service chain
                             # | capchain: the chain with capacity nodes and a noisy-min
                             #   prior (needs capacity=True)
+    chain_load="t",         # load the chain is queried with: t (the current load, all a
+                            # controller has in deployment) | t+h (the load of the predicted
+                            # step, known in the experiments from the workload schedule)
 )
 
 MAX_HISTORY = {1: 5, 5: 5, 10: 3, 30: 3}   # rows of history reserved per granularity
@@ -208,6 +213,22 @@ def variable_pool(S, cfg):
     if cfg["pool"] == "local":
         return local_pool(S)
     return [v for v in S.vars if cfg["pool"] == "all" or is_core(v)]
+
+
+def information_columns(S, cfg):
+    """
+    Every column the configuration can read: its candidate parents plus what the
+    service chain reads at reconfigurations (the load, and the configuration of
+    every service up to the target). Other models compared with the DBN are
+    given exactly these columns, so all of them see the same information.
+    """
+    cols = candidate_columns(S, cfg)
+    if cfg["on_change"] in ("chain", "capchain") and S.target.startswith("throughput_"):
+        cols.append(f"{D.LOAD_COL}@t" if cfg["chain_load"] == "t" else f"{D.LOAD_COL}@t+h")
+        for i in range(1, service_of(S.target) + 1):
+            cols += [f"capacity_{i}@t+h"] if cfg["on_change"] == "capchain" \
+                else [f"cores_{i}@t+h", f"data_quality_{i}@t+h"]
+    return list(dict.fromkeys(c for c in cols if c in S.cols))
 
 
 def candidate_columns(S, cfg):
@@ -825,7 +846,8 @@ def chain_predict(S, cfg, binner, tr, te):
             def predict(up_code, cpt=cpt, ctrl_te=ctrl_te):
                 return cpt.predict([up_code] + ctrl_te, n)
         if P_up is None:                                   # the load is observed
-            P_up = predict(c_te(up)[0])
+            load = up if cfg["chain_load"] == "t+h" else f"{D.LOAD_COL}@t"
+            P_up = predict(c_te(load)[0])
         else:                                              # sum over the unobserved upstream flow
             P_up = sum(P_up[:, [s]] * predict(np.full(n, s)) for s in range(K))
     return P_up
@@ -978,7 +1000,7 @@ def study_ofat():
     c += [make_cfg(relative=True), make_cfg(target_mode="delta"),
           make_cfg(target_mode="delta", relative=True)]
     # what is known about t+h, which variables are offered
-    c += [make_cfg(exog=e) for e in ("none", "controls")]
+    c += [make_cfg(exog="none")]
     c += [make_cfg(pool="all")]
     # structure learning
     engines = ("ar", "hc-bic", "hc-bic-obs", "hc-aic", "hc-bdeu", "cmi", "lasso", "dynotears")
@@ -1117,6 +1139,13 @@ def study_recommended():
     return c
 
 
+def study_chain_load():
+    """Sensitivity: the recommended model for throughput_3 with the next-step load given (as in the experiments)."""
+    return [recommended_cfg("throughput_3"),
+            recommended_cfg("throughput_3", chain_load="t+h"),
+            recommended_cfg("throughput_3", chain_load="t+h", exog="controls+load")]
+
+
 def study_extras():
     """Slow level variable in the one-step model; DYNOTEARS penalty."""
     c = []
@@ -1130,7 +1159,7 @@ def study_extras():
     return c
 
 
-STUDIES = {"extras": study_extras, "recommended": study_recommended, "capacity": study_capacity, "targets": study_targets, "constraints": study_constraints, "numeric": study_numeric,
+STUDIES = {"chain_load": study_chain_load, "extras": study_extras, "recommended": study_recommended, "capacity": study_capacity, "targets": study_targets, "constraints": study_constraints, "numeric": study_numeric,
            "best": study_best, "config_change": study_config_change, "ofat": study_ofat, "bins_granularity": study_bins_granularity, "horizon": study_horizon,
            "interactions": study_interactions, "cv": study_cv, "refs": study_refs}
 
