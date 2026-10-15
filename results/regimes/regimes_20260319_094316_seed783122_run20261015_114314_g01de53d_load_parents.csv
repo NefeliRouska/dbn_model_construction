@@ -1,0 +1,21 @@
+regime_kind,fold,regime,parents,n_train
+load,1,ALL,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",33200
+load,1,high,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",8550
+load,1,low,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",12615
+load,1,mid,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",12035
+load,2,ALL,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",66758
+load,2,high,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",18708
+load,2,low,"[""y@t"", ""data_quality_1@t+h"", ""throughput_2@t"", ""throughput_2@t-1""]",24080
+load,2,mid,"[""y@t"", ""throughput_2@t-1"", ""data_quality_1@t+h"", ""throughput_2@t""]",23970
+load,3,ALL,"[""y@t"", ""data_quality_1@t+h"", ""throughput_2@t"", ""throughput_2@t-1""]",99959
+load,3,high,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1"", ""y@t-1""]",30848
+load,3,low,"[""y@t"", ""y@t-1"", ""data_quality_1@t+h"", ""throughput_1@t-1""]",36259
+load,3,mid,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",32852
+load,4,ALL,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",133160
+load,4,high,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",43317
+load,4,low,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1"", ""avg_p_latency_3@t""]",45177
+load,4,mid,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1"", ""buffer_size_3@t""]",44666
+load,5,ALL,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1"", ""buffer_size_3@t""]",166718
+load,5,high,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",56455
+load,5,low,"[""y@t"", ""throughput_2@t"", ""throughput_2@t-1""]",54428
+load,5,mid,"[""y@t"", ""y@t-1"", ""throughput_2@t"", ""throughput_2@t-1""]",55835
