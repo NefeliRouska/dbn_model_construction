@@ -1,0 +1,223 @@
+"""
+planner.py -- the Plan step of the adaptation loop: score every allowed
+configuration with the DBN and pick the one with the highest expected utility.
+
+Utility: the SLO fulfillment of Sedlak et al. (arXiv 2510.06882), adapted to
+the chain. Each SLO is met to the share phi = min(measured / target, 1). In the
+paper every service has a completion SLO (weight 1.0) and a quality SLO (0.5);
+in the chain completion is measured once, end to end, so it carries the weight
+of the three services' completion SLOs:
+
+    completion   tp_3 / load, target 1, weight 3 x 1.0
+    quality_i    q_i / 800,   target 1, weight 0.5   (one per service)
+
+    U(a | load) = (3.0 * E[phi_completion | do(a), load] + 0.5 * sum_i phi_quality_i) / 4.5
+
+(With weight 1.0 the three quality SLOs outweigh completion, and at high load
+the planner kept quality and dropped most requests.)
+
+E[phi_completion] comes from the reconfiguration chain of the model,
+P(throughput_3 | load, capacity_1..3) with the upstream throughputs summed out
+(same structure, bins and noisy-min prior), with its three tables refitted for
+the question the planner asks -- what a configuration delivers once settled:
+
+  - on WINDOW-second means (30 s, as in Part 1's unseen-configurations study)
+    instead of single seconds: a queue of a few hundred requests lets a service
+    emit far more than it receives for a few seconds, and the per-second
+    tables learned those bursts;
+  - without windows that contain a second in which service 2 or 3 is DRAINING
+    a backlog: its queue holds at least QUEUE requests and is shrinking. A
+    draining service emits more than it receives (in 87% / 77% of those
+    seconds for services 2 / 3, against 2% when a long queue is growing and
+    ~1% otherwise). Growing queues stay in: they are what an overloaded
+    service looks like.
+
+With the model's own per-second chain, one run with a 47,000-request backlog
+made the table say "service 2 emits ~263 req/s although service 1 sends ~34",
+and the search over 12,320 candidates found and exploited that entry (expected
+throughput_3 of 242 req/s behind a service that can pass 34). That is right
+for predicting the next second (Part 1), not for planning. The Part 1 model
+itself is unchanged.
+
+The load is the one at t; the load after the change is not known (commit 01de53d).
+
+Candidates are the training support: ordered core triples with c_i >= 1 and
+c1 + c2 + c3 <= 8 (56), times quality triples from {100, ..., 1000} with
+q1 >= q2 >= q3 (220): 12,320 configurations.
+"""
+import itertools
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "dbn"))
+import ablation as A  # noqa: E402
+import build_model as B  # noqa: E402
+import data as D  # noqa: E402
+
+TOTAL_CORES = 8
+QUALITIES = list(range(100, 1001, 100))
+SETTINGS = [f"{p}_{i}" for p in ("cores", "data_quality") for i in (1, 2, 3)]
+
+W_COMPLETION, W_QUALITY, QUALITY_TARGET = 3.0, 0.5, 800.0
+DELTA = 0.01          # act only if the best candidate beats the current one by more than this
+QUEUE, LOOKBACK = 1000, 10   # draining: queue >= QUEUE and smaller than LOOKBACK seconds earlier
+WINDOW = 30                  # seconds per row of the planner's tables
+
+
+def draining(frame, queue=QUEUE, lookback=LOOKBACK):
+    """
+    Boolean per row of one frame: service 2 or 3 is emptying a backlog. The
+    queue is compared with LOOKBACK seconds earlier, or, in the first LOOKBACK
+    seconds of a run (no earlier value), with LOOKBACK seconds later.
+    """
+    out = np.zeros(len(frame), dtype=bool)
+    for i in (2, 3):
+        b = frame[f"buffer_size_{i}"]
+        g = b.groupby(frame["run_id"])
+        before, after = g.shift(lookback), g.shift(-lookback)
+        shrinking = (b < before) | (before.isna() & (after < b))
+        out |= ((b >= queue) & shrinking).to_numpy()
+    return out
+
+
+def settled_windows(frames, window=WINDOW, queue=QUEUE, lookback=LOOKBACK):
+    """WINDOW-second means of the frames, and per window whether it contains a draining second."""
+    out = []
+    for f in frames:
+        f = f.assign(draining=draining(f, queue, lookback).astype(float))
+        out.append(D.aggregate(f, window))
+    df = pd.concat(out, ignore_index=True)
+    return df, (df["draining"] > 0).to_numpy()
+
+
+def settled_chain(model, frames, window=WINDOW, queue=QUEUE, lookback=LOOKBACK):
+    """
+    The three chain tables of throughput_3, refitted on settled WINDOW-second
+    means: P(throughput_i | upstream flow, capacity_i), same bins, same
+    noisy-min prior and prior weight as the model's own chain.
+    Returns (tables, info).
+    """
+    node = model.nodes["throughput_3"]
+    df, drain = settled_windows(frames, window, queue, lookback)
+    df = df[~drain]
+    K, edges, ess = node.n_y, node.y_edges, node.cfg["ess"]
+    code = lambda x: np.searchsorted(edges, np.asarray(x, dtype=float), side="right")  # noqa: E731
+    tables = []
+    for i in (1, 2, 3):
+        up = code(df[D.LOAD_COL] if i == 1 else df[f"throughput_{i - 1}"])
+        cap = code(df[f"capacity_{i}"])
+        tables.append(A.CPT([up, cap, np.minimum(up, cap)], [K, K, K], code(df[f"throughput_{i}"]),
+                            K, "backoff", ess, (2, A.noisy_min_table(K))))
+    return tables, dict(settled_windows=int((~drain).sum()), all_windows=len(drain),
+                        window=window, queue=queue, lookback=lookback)
+
+
+def build_settled_chain(model_path, out=None, window=WINDOW, queue=QUEUE, lookback=LOOKBACK):
+    """Fit the settled tables on the model's training files and save them next to the model."""
+    model = B.Model.load(str(model_path))
+    frames = [model.load_frame(REPO / "data" / f) for f in model.meta["files"]]
+    tables, info = settled_chain(model, frames, window, queue, lookback)
+    out = Path(out or Path(model_path).with_name(Path(model_path).stem + "_planner_chain.pkl"))
+    pd.to_pickle(dict(tables=tables, info=info, model=Path(model_path).name), out)
+    return out, info
+
+
+def candidates():
+    """DataFrame of the 12,320 allowed configurations, columns SETTINGS."""
+    cores = [c for c in itertools.product(range(1, TOTAL_CORES + 1), repeat=3) if sum(c) <= TOTAL_CORES]
+    quals = [q for q in itertools.product(QUALITIES, repeat=3) if q[0] >= q[1] >= q[2]]
+    rows = [(*c, *q) for c in cores for q in quals]
+    return pd.DataFrame(rows, columns=SETTINGS)
+
+
+class Planner:
+    def __init__(self, model, tables=None, delta=DELTA):
+        """tables: the settled chain (settled_chain / build_settled_chain); None = the model's own chain."""
+        self.model, self.tables, self.delta = model, tables, delta
+        self.node = model.nodes["throughput_3"]
+        if self.node.chain is None:
+            raise ValueError("the model has no reconfiguration chain for throughput_3")
+        self.cands = B.add_capacity(candidates(), model.capacity)
+        self.phi_quality = np.minimum(self.cands[[f"data_quality_{i}" for i in (1, 2, 3)]].to_numpy()
+                                      / QUALITY_TARGET, 1.0).sum(axis=1)
+
+    def throughput_3(self, load, configs):
+        """P(bin of throughput_3) for each row of `configs` (with capacity columns) under `load`."""
+        n = len(configs)
+        if self.tables is None:
+            inputs = {f"{D.LOAD_COL}@t": np.full(n, float(load))}
+            for i in (1, 2, 3):
+                inputs[f"capacity_{i}@t+h"] = configs[f"capacity_{i}"].to_numpy(dtype=float)
+            return self.node._predict_chain(inputs, np.ones(n, dtype=bool))
+        K, edges = self.node.n_y, self.node.y_edges
+        code = lambda x: np.searchsorted(edges, np.asarray(x, dtype=float), side="right")  # noqa: E731
+        P_up = None
+        for i, cpt in zip((1, 2, 3), self.tables):
+            cap = code(configs[f"capacity_{i}"])
+            table = lambda up, cpt=cpt, cap=cap: cpt.predict([up, cap, np.minimum(up, cap)], n)  # noqa: E731
+            if P_up is None:                               # the load is observed
+                P_up = table(np.full(n, code(load)))
+            else:                                          # sum over the unobserved upstream flow
+                P_up = sum(P_up[:, [s]] * table(np.full(n, s)) for s in range(K))
+        return P_up
+
+    def expected_completion(self, load, P):
+        phi = np.minimum(self.node.bin_value / max(float(load), 1e-9), 1.0)
+        return P @ phi
+
+    def score(self, load, configs=None, phi_quality=None):
+        configs = self.cands if configs is None else configs
+        if phi_quality is None:
+            phi_quality = np.minimum(configs[[f"data_quality_{i}" for i in (1, 2, 3)]].to_numpy()
+                                     / QUALITY_TARGET, 1.0).sum(axis=1)
+        P = self.throughput_3(load, configs)
+        completion = self.expected_completion(load, P)
+        utility = (W_COMPLETION * completion + W_QUALITY * phi_quality) / (W_COMPLETION + 3 * W_QUALITY)
+        return utility, completion, P
+
+    def decide(self, load, current):
+        """
+        current: {setting: value} of the configuration in place.
+        Returns a dict: act (bool), config (the one to apply, or the current one),
+        utility / completion of the chosen and of the current configuration,
+        and the predicted distribution of throughput_3 for the chosen one.
+
+        Ties in utility are broken by fewer settings changed, then fewer cores.
+        """
+        U, comp, P = self.score(load, self.cands, self.phi_quality)
+        cur = B.add_capacity(pd.DataFrame([current])[SETTINGS], self.model.capacity)
+        U_cur, comp_cur, P_cur = self.score(load, cur)
+
+        X = self.cands[SETTINGS].to_numpy()
+        changed = (X != cur[SETTINGS].to_numpy()).sum(axis=1)
+        n_cores = X[:, :3].sum(axis=1)
+        best = np.lexsort((n_cores, changed, -np.round(U, 12)))[0]
+
+        act = bool(U[best] - U_cur[0] > self.delta)
+        k = best if act else None
+        return dict(
+            act=act,
+            config={c: int(v) for c, v in zip(SETTINGS, X[best] if act else cur[SETTINGS].to_numpy()[0])},
+            utility=float(U[best] if act else U_cur[0]), completion=float(comp[best] if act else comp_cur[0]),
+            utility_current=float(U_cur[0]), completion_current=float(comp_cur[0]),
+            utility_best=float(U[best]), completion_best=float(comp[best]),
+            probs=(P[k] if act else P_cur[0]), bin_value=self.node.bin_value,
+        )
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser(description="Fit and save the planner's settled chain for a model.")
+    ap.add_argument("--model", required=True)
+    ap.add_argument("--window", type=int, default=WINDOW)
+    ap.add_argument("--queue", type=int, default=QUEUE)
+    ap.add_argument("--lookback", type=int, default=LOOKBACK)
+    args = ap.parse_args()
+    path, info = build_settled_chain(args.model, window=args.window, queue=args.queue, lookback=args.lookback)
+    print(f"wrote {path}: {info['settled_windows']} of {info['all_windows']} {info['window']} s windows kept "
+          f"({info['settled_windows'] / info['all_windows']:.1%}; dropped: a second with queue >= "
+          f"{info['queue']} shrinking over {info['lookback']} s)")
