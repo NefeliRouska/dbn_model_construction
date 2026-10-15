@@ -1,0 +1,45 @@
+child,parent,parent_slice,input,used
+throughput_1,throughput_1,t,throughput_1@t,within a run
+throughput_1,capacity_1,t+h,capacity_1@t+h,within a run
+throughput_1,avg_p_latency_1,t,avg_p_latency_1@t,within a run
+throughput_1,throughput_1,t-1,throughput_1@t-1,within a run
+throughput_1,rps,t+h,rps@t+h,reconfiguration chain of throughput_1
+throughput_1,capacity_1,t+h,capacity_1@t+h,reconfiguration chain of throughput_1
+throughput_2,throughput_2,t,throughput_2@t,within a run
+throughput_2,throughput_1,t,throughput_1@t,within a run
+throughput_2,capacity_2,t+h,capacity_2@t+h,within a run
+throughput_2,throughput_1,t-1,throughput_1@t-1,within a run
+throughput_1,rps,t+h,rps@t+h,reconfiguration chain of throughput_2
+throughput_1,capacity_1,t+h,capacity_1@t+h,reconfiguration chain of throughput_2
+throughput_2,throughput_1,t+h,throughput_1@t+h,reconfiguration chain of throughput_2
+throughput_2,capacity_2,t+h,capacity_2@t+h,reconfiguration chain of throughput_2
+throughput_3,throughput_3,t,throughput_3@t,within a run
+throughput_3,throughput_2,t,throughput_2@t,within a run
+throughput_3,throughput_2,t-1,throughput_2@t-1,within a run
+throughput_3,buffer_size_3,t,buffer_size_3@t,within a run
+throughput_1,rps,t+h,rps@t+h,reconfiguration chain of throughput_3
+throughput_1,capacity_1,t+h,capacity_1@t+h,reconfiguration chain of throughput_3
+throughput_2,throughput_1,t+h,throughput_1@t+h,reconfiguration chain of throughput_3
+throughput_2,capacity_2,t+h,capacity_2@t+h,reconfiguration chain of throughput_3
+throughput_3,throughput_2,t+h,throughput_2@t+h,reconfiguration chain of throughput_3
+throughput_3,capacity_3,t+h,capacity_3@t+h,reconfiguration chain of throughput_3
+avg_p_latency_1,avg_p_latency_1,t,avg_p_latency_1@t,within a run
+avg_p_latency_1,capacity_1,t+h,capacity_1@t+h,within a run
+avg_p_latency_1,data_quality_1,t+h,data_quality_1@t+h,within a run
+avg_p_latency_1,avg_p_latency_1,t-1,avg_p_latency_1@t-1,within a run
+avg_p_latency_2,avg_p_latency_2,t,avg_p_latency_2@t,within a run
+avg_p_latency_2,data_quality_2,t+h,data_quality_2@t+h,within a run
+avg_p_latency_2,cores_2,t+h,cores_2@t+h,within a run
+avg_p_latency_2,buffer_size_2,t,buffer_size_2@t,within a run
+avg_p_latency_3,avg_p_latency_3,t,avg_p_latency_3@t,within a run
+avg_p_latency_3,data_quality_3,t+h,data_quality_3@t+h,within a run
+avg_p_latency_3,avg_p_latency_3,t-1,avg_p_latency_3@t-1,within a run
+avg_p_latency_3,cores_3,t+h,cores_3@t+h,within a run
+buffer_size_2,buffer_size_2,t,buffer_size_2@t,within a run
+buffer_size_2,buffer_size_2,t-1,buffer_size_2@t-1,within a run
+buffer_size_2,throughput_1,t,throughput_1@t,within a run
+buffer_size_2,throughput_2,t,throughput_2@t,within a run
+buffer_size_3,buffer_size_3,t,buffer_size_3@t,within a run
+buffer_size_3,buffer_size_3,t-1,buffer_size_3@t-1,within a run
+buffer_size_3,throughput_2,t,throughput_2@t,within a run
+buffer_size_3,throughput_2,t-1,throughput_2@t-1,within a run
