@@ -53,8 +53,8 @@ class MinRulePlanner(PL.Planner):
         utility = (PL.W_COMPLETION * completion + PL.W_QUALITY * phi_quality) / (PL.W_COMPLETION + 3 * PL.W_QUALITY)
         return utility, completion, None
 
-    def decide(self, load, current, row=None):
-        d = super().decide(load, current)
+    def decide(self, load, current, row=None, observed=None):
+        d = super().decide(load, current, observed=observed)
         d["probs"] = None
         return d
 
@@ -76,7 +76,7 @@ class VpaPlanner:
         return B.add_capacity(pd.DataFrame([config]), self.model.capacity)[[f"capacity_{i}" for i in (1, 2, 3)]] \
             .to_numpy()[0]
 
-    def decide(self, load, current, row):
+    def decide(self, load, current, row, observed=None):
         arrivals = np.array([load, row["throughput_1"], row["throughput_2"]], dtype=float)
         new = dict(current)
         cap = self._capacity(new)

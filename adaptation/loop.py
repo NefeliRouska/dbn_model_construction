@@ -7,10 +7,16 @@ per second, on the live chain or on the simulator.
             failing (completion tp3/load below FAIL_BELOW, median of the last
             FAIL_SECONDS seconds: the services stall for 1-2 s now and then,
             ~1% of seconds in the training data, and a mean would call that a
-            failure) or the load has moved by more than LOAD_CHANGE since the
-            last plan. The first plan waits FAIL_SECONDS seconds, so the
+            failure) or the load, averaged over the last FAIL_SECONDS seconds,
+            has moved by more than LOAD_CHANGE since the last plan (on a load
+            that changes every second, the noise of a single second at ~150
+            req/s is already close to 10%), or the load of the current second
+            by more than LOAD_JUMP (a step in the load is acted on at once,
+            not 5 s later). The planner is given the load it was triggered by. The first plan waits FAIL_SECONDS seconds, so the
             Monitor already sees the load that was set.
-  Plan      planner.Planner.decide (expected SLO utility over 12,320 configurations)
+  Plan      planner.Planner.decide (expected SLO utility over 12,320 configurations);
+            when the chain is failing, the current configuration is scored by
+            its observed completion (median of the last FAIL_SECONDS seconds)
   Execute   Executor: the API calls of data_collection/experiment_orchestrator.py,
             cores lowered before others are raised so the budget of 8 holds
   Knowledge the model, the planner's settled chain and the log of every second
@@ -51,7 +57,8 @@ from check_monitor import DEFAULT_MODEL  # noqa: E402
 RESULTS = REPO / "results" / "adaptation_loop"
 
 FAIL_BELOW, FAIL_SECONDS = 0.97, 5     # failing: median completion of the last 5 s below 0.97
-LOAD_CHANGE = 0.10                     # re-plan when the load moved by more than 10%
+LOAD_CHANGE = 0.10                     # re-plan when the 5 s mean load moved by more than 10%
+LOAD_JUMP = 0.20                       # ... or the load of this second by more than 20% (react at once)
 COOLDOWN = 10                          # seconds after an action before the next one: on the testbed a
                                        # change settles within 5-8 s (calibrate_live.py), and Sedlak et
                                        # al. act every 10 s
@@ -95,6 +102,16 @@ class Analyzer:
 
     def update(self, t, row):
         self.recent = (self.recent + [completion(row)])[-self.fail_seconds:]
+        self.loads = (getattr(self, "loads", []) + [row["rps"]])[-self.fail_seconds:]
+
+    def load(self):
+        """The load the loop plans for: the current second's after a jump, else the mean of the last seconds."""
+        if self.planned_load is not None and self._jump():
+            return float(self.loads[-1])
+        return float(np.mean(self.loads))
+
+    def _jump(self):
+        return abs(self.loads[-1] - self.planned_load) > LOAD_JUMP * max(self.planned_load, 1.0)
 
     def reason(self, t, row):
         """Why the loop should plan now, or None."""
@@ -102,7 +119,9 @@ class Analyzer:
             return None
         if self.planned_load is None:
             return "start"
-        if abs(row["rps"] - self.planned_load) > self.load_change * max(self.planned_load, 1.0):
+        if self._jump():
+            return "load jumped"
+        if abs(self.load() - self.planned_load) > self.load_change * max(self.planned_load, 1.0):
             return "load changed"
         failing = np.median(self.recent) < self.fail_below
         if failing and t - self.last_plan >= self.recheck:
@@ -110,7 +129,9 @@ class Analyzer:
         return None
 
     def planned(self, t, row, acted):
-        self.last_plan, self.planned_load = t, row["rps"]
+        if self.planned_load is not None and self._jump():
+            self.loads = self.loads[-1:]               # the mean restarts at the new level
+        self.last_plan, self.planned_load = t, self.load()
         if acted:
             self.last_action = t
 
@@ -192,8 +213,9 @@ def run(system, plan, program, log_path, start=START):
             if why is not None and plan is not None:
                 current = {c: int(row[c]) for c in PL.SETTINGS}
                 t_plan = time.perf_counter()
-                d = plan(row["rps"], current, row=row)
-                rec.update(event=why, plan_ms=round((time.perf_counter() - t_plan) * 1000, 1),
+                observed = float(np.median(analyzer.recent)) if why == "failing" else None
+                d = plan(analyzer.load(), current, row=row, observed=observed)
+                rec.update(event=why, planned_load=analyzer.load(), plan_ms=round((time.perf_counter() - t_plan) * 1000, 1),
                            act=d["act"], new_config=d["config"] if d["act"] else None,
                            predicted_completion=d["completion"], predicted_utility=d["utility"],
                            current_predicted_completion=d["completion_current"])
@@ -258,7 +280,11 @@ def main():
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     bins = f"_{args.bins or 20}bins" if args.planner == "dbn" else ""
-    name = f"{'sim' if args.sim else 'live'}_{args.planner}{bins}_{int(args.minutes)}min_seed{args.seed}{args.tag}_{stamp}"
+    pats = "-".join(p[:4] for p in patterns)
+    name = f"{'sim' if args.sim else 'live'}_{args.planner}{bins}_{int(args.minutes)}min_seed{args.seed}_{pats}{args.tag}_{stamp}"
+    k = 1
+    while (RESULTS / f"{name}.jsonl").exists():           # never overwrite a run
+        name, k = f"{name.rsplit('_n', 1)[0]}_n{k}", k + 1
     log = run(system, plan, program, RESULTS / f"{name}.jsonl", start)
     print(f"log: {log}")
     print(summary(log).round(3).to_string())

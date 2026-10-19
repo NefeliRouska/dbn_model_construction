@@ -211,10 +211,14 @@ class Planner:
         utility = (W_COMPLETION * completion + W_QUALITY * phi_quality) / (W_COMPLETION + 3 * W_QUALITY)
         return utility, completion, P
 
-    def decide(self, load, current, row=None):
+    def decide(self, load, current, row=None, observed=None):
         """
         current: {setting: value} of the configuration in place; row (the
         Monitor's row) is not used here, only by planners that read telemetry.
+        observed: the completion measured for the current configuration (the
+        loop passes it when the chain is failing). The current configuration
+        is then scored by what it does, not by what the model predicts for it,
+        so a configuration the model is too optimistic about is not kept.
         Returns a dict: act (bool), config (the one to apply, or the current one),
         utility / completion of the chosen and of the current configuration,
         and the predicted distribution of throughput_3 for the chosen one.
@@ -224,6 +228,10 @@ class Planner:
         U, comp, P = self.score(load, self.cands, self.phi_quality)
         cur = B.add_capacity(pd.DataFrame([current])[SETTINGS], self.model.capacity)
         U_cur, comp_cur, P_cur = self.score(load, cur)
+        if observed is not None:
+            q_cur = np.minimum(cur[[f"data_quality_{i}" for i in (1, 2, 3)]].to_numpy() / QUALITY_TARGET, 1.0).sum(axis=1)
+            comp_cur = np.array([float(observed)])
+            U_cur = (W_COMPLETION * comp_cur + W_QUALITY * q_cur) / (W_COMPLETION + 3 * W_QUALITY)
 
         X = self.cands[SETTINGS].to_numpy()
         changed = (X != cur[SETTINGS].to_numpy()).sum(axis=1)
