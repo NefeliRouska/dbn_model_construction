@@ -22,7 +22,7 @@ Every second is written to a JSON-lines log (one dict per second, with the
 decision when there was one); summary() turns a log into the run's metrics.
 
 Usage:
-    python adaptation/loop.py --sim [--minutes 60] [--planner dbn|static]
+    python adaptation/loop.py --sim [--minutes 60] [--planner dbn|minrule|static|vpa]
     python adaptation/loop.py --live --minutes 60      # on the lab machine only
     python adaptation/loop.py --live --minutes 10 --patterns periodic   # a short test
 """
@@ -153,15 +153,15 @@ class LiveChain:
         return ts, row
 
 
-def run(system, plan, program, log_path, apply_start=True):
+def run(system, plan, program, log_path, start=START):
     """
-    One episode. plan(load, current) -> decision dict (planner.Planner.decide's
-    shape) or None for a planner that never acts.
+    One episode. plan(load, current, row) -> decision dict (planner.Planner.decide's
+    shape) or None for a planner that never acts; start: the configuration
+    applied before the first second.
     """
     analyzer, last_load, t0 = Analyzer(), None, None
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    if apply_start:
-        system.apply(START)
+    system.apply(start)
     with open(log_path, "w") as log:
         for t in range(program.duration):
             pattern, load = program(t)
@@ -177,7 +177,7 @@ def run(system, plan, program, log_path, apply_start=True):
             if why is not None and plan is not None:
                 current = {c: int(row[c]) for c in PL.SETTINGS}
                 t_plan = time.perf_counter()
-                d = plan(row["rps"], current)
+                d = plan(row["rps"], current, row=row)
                 rec.update(event=why, plan_ms=round((time.perf_counter() - t_plan) * 1000, 1),
                            act=d["act"], new_config=d["config"] if d["act"] else None,
                            predicted_completion=d["completion"], predicted_utility=d["utility"],
@@ -214,28 +214,37 @@ def main():
     mode.add_argument("--live", action="store_true")
     ap.add_argument("--minutes", type=float, default=60, help="minutes per load pattern")
     ap.add_argument("--patterns", default=",".join(PATTERNS), help="comma-separated, in order")
-    ap.add_argument("--planner", default="dbn", choices=["dbn", "static"])
+    ap.add_argument("--planner", default="dbn", choices=["dbn", "minrule", "static", "vpa"])
     ap.add_argument("--bins", type=int, default=PL.PLANNER_BINS, help="bins of the planner's chain (0 = the model's)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
     model = B.Model.load(str(DEFAULT_MODEL))
-    plan = PL.Planner(model, PL.load_chain(PL.chain_path(DEFAULT_MODEL, args.bins or None))).decide \
-        if args.planner == "dbn" else None
+    import baselines as BL
     patterns = tuple(args.patterns.split(","))
     program = LoadProgram(patterns, seconds=int(args.minutes * 60))
+    start, plan = START, None
+    if args.planner == "dbn":
+        plan = PL.Planner(model, PL.load_chain(PL.chain_path(DEFAULT_MODEL, args.bins or None))).decide
+    elif args.planner == "minrule":
+        plan = BL.MinRulePlanner(model).decide
+    elif args.planner in ("static", "vpa"):
+        start, u = BL.static_best(model, [program(t)[1] for t in range(program.duration)])
+        print(f"start configuration {start} (static_best), mean min-rule utility over the program {u:.3f}")
+        if args.planner == "vpa":
+            plan = BL.VpaPlanner(model).decide
 
     if args.sim:
         from simulator import SimulatedChain
-        system = SimulatedChain(model.capacity, START, seed=args.seed)
+        system = SimulatedChain(model.capacity, start, seed=args.seed)
     else:
         system = LiveChain()
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     bins = f"_{args.bins or 20}bins" if args.planner == "dbn" else ""
     name = f"{'sim' if args.sim else 'live'}_{args.planner}{bins}_{int(args.minutes)}min_seed{args.seed}{args.tag}_{stamp}"
-    log = run(system, plan, program, RESULTS / f"{name}.jsonl")
+    log = run(system, plan, program, RESULTS / f"{name}.jsonl", start)
     print(f"log: {log}")
     print(summary(log).round(3).to_string())
 

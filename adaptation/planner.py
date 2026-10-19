@@ -211,9 +211,10 @@ class Planner:
         utility = (W_COMPLETION * completion + W_QUALITY * phi_quality) / (W_COMPLETION + 3 * W_QUALITY)
         return utility, completion, P
 
-    def decide(self, load, current):
+    def decide(self, load, current, row=None):
         """
-        current: {setting: value} of the configuration in place.
+        current: {setting: value} of the configuration in place; row (the
+        Monitor's row) is not used here, only by planners that read telemetry.
         Returns a dict: act (bool), config (the one to apply, or the current one),
         utility / completion of the chosen and of the current configuration,
         and the predicted distribution of throughput_3 for the chosen one.
@@ -237,7 +238,7 @@ class Planner:
             utility=float(U[best] if act else U_cur[0]), completion=float(comp[best] if act else comp_cur[0]),
             utility_current=float(U_cur[0]), completion_current=float(comp_cur[0]),
             utility_best=float(U[best]), completion_best=float(comp[best]),
-            probs=(P[k] if act else P_cur[0]), bin_value=self.bin_value,
+            probs=None if P is None else (P[k] if act else P_cur[0]), bin_value=self.bin_value,
         )
 
 
