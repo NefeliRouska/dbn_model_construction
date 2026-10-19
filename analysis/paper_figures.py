@@ -101,7 +101,7 @@ def p1_buildup():
     steps = BUILDUP_STEPS
     titles = [("A. All test samples\n ", (0.85, 0.95)),
               ("B. Bin changes\nbin at t+1 differs from bin at t", (0, 1)),
-              ("C. Reconfigurations\nfirst second after new cores or data quality", (0, 1))]
+              ("C. Reconfigurations\nfirst recorded second after the change (≥ 30 s)", (0, 1))]
     res = buildup_results()
     y = np.arange(len(steps))[::-1]
     fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.6), sharey=True, gridspec_kw={"width_ratios": (1.2, 1, 1)})
@@ -119,7 +119,6 @@ def p1_buildup():
                         (max(r["dbn"], r["ar"] + r["hi"]), yi), xytext=(6, 0), textcoords="offset points",
                         va="center", fontsize=8.5)
         ax.set_xlim(*xlim)
-        ax.set_xlabel("accuracy, throughput 3 (next-second bin)")
         head, sub = title.split("\n")
         ax.set_title(head, fontsize=10.5, pad=30, loc="left")
         ax.annotate(sub, (0, 1), xycoords="axes fraction", xytext=(0, 17), textcoords="offset points",
@@ -136,7 +135,8 @@ def p1_buildup():
                plt.Line2D([], [], color=NEUTRAL, lw=1.3, ls="--", label="AR(1)")]
     fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.005, 0.0), ncols=3, fontsize=8.5,
                handlelength=2.2, columnspacing=1.5, frameon=False)
-    fig.tight_layout(rect=(0, 0.06, 1, 0.95))
+    fig.supxlabel("accuracy, throughput 3 (next-second bin)", x=0.62, y=0.075, fontsize=10, color=MUTED)
+    fig.tight_layout(rect=(0, 0.1, 1, 0.95))
     save(fig, "p1_buildup")
 
 
@@ -235,13 +235,12 @@ def p1_bins_resolution():
         ax.axhline(0, color=MUTED, linewidth=1)
         ax.set_xticks(np.arange(len(bins)), bins)
         ax.set_xlabel("number of bins of throughput 3")
-        ax.set_title(title, fontsize=10.5)
+        ax.set_title(title, fontsize=10.5, pad=16)
     lo = min(a.get_ylim()[0] for a in axes[:2])
     hi = max(a.get_ylim()[1] for a in axes[:2])
     for a in axes[:2]:
         a.set_ylim(lo, hi)
-    axes[0].set_ylabel("accuracy minus AR table (percentage points)")
-    axes[0].legend(loc="upper left", fontsize=9)
+    axes[0].set_ylabel("accuracy minus AR(1), percentage points")
 
     ax = axes[2]
     disc = [("ref", "equal width (used)"), ("disc=quantile", "equal frequency"), ("disc=kmeans", "k-means")]
@@ -257,13 +256,19 @@ def p1_bins_resolution():
     ax.grid(axis="y", visible=False)
     ax.grid(axis="x", visible=True)
     ax.margins(x=0.2, y=0.25)
-    ax.set_xlabel("minus AR (percentage points)")
-    ax.set_title("C. Discretisation of the target", fontsize=10.5)
-    fig.suptitle("Number of bins, time resolution and discretisation (throughput 3)", x=0.01, ha="left",
+    ax.set_xlabel("accuracy minus AR(1), percentage points")
+    ax.set_title("C. Discretisation of the target", fontsize=10.5, pad=16)
+    ax.annotate("1 s rows, 20 bins", (0, 1), xycoords="axes fraction", xytext=(0, 4), textcoords="offset points",
+                fontsize=8.5, color=MUTED, va="bottom")
+    fig.suptitle("Number of bins, time resolution and discretisation", x=0.01, ha="left",
                  fontsize=12, fontweight="bold")
-    fig.text(0.01, 0.01, "pooled over the three load patterns; bars: 95% intervals (bootstrap over schedule "
-             "positions); AR scored on the same bins and samples in every case; C: 1 s rows, 20 bins", color=MUTED, fontsize=8)
-    fig.tight_layout(rect=(0, 0.04, 1, 0.93))
+    handles = [plt.Line2D([], [], color=c, marker="o", markersize=5, markeredgecolor=SURFACE, lw=1.8,
+                          label=f"{g} s rows") for g, c in res] + \
+              [plt.Line2D([], [], color=NEUTRAL, lw=1.2, marker="|", markersize=10, ls="",
+                          label="95% interval of the difference to AR(1)")]
+    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.005, 0.0), ncols=5, fontsize=8.5,
+               frameon=False)
+    fig.tight_layout(rect=(0, 0.07, 1, 0.93))
     save(fig, "p1_bins_resolution")
 
 
@@ -438,17 +443,16 @@ def p2_comparison():
     (TABLES / "comparison.tex").write_text("\n".join(lines) + "\n")
 
     comparison_plot(t, (("acc", "{:.3f}", "accuracy"), ("logloss", "{:.2f}", "log-loss"),
-                        ("mae", "{:.1f}", "MAE (req/s)")), "p2_comparison",
-                    "DBN MAE from its conditional-median read-out; ")
+                        ("mae", "{:.1f}", "MAE (req/s)")), "p2_comparison")
 
 
 def p2_comparison_main():
     """The main-text version: accuracy and log-loss only (MAE is in tables/comparison.tex)."""
     comparison_plot(comparison_table(), (("acc", "{:.3f}", "accuracy"), ("logloss", "{:.2f}", "log-loss")),
-                    "p2_comparison_main", "")
+                    "p2_comparison_main")
 
 
-def comparison_plot(t, metrics, name, note):
+def comparison_plot(t, metrics, name):
     fig, axes = plt.subplots(2, len(metrics), figsize=(4.5 * len(metrics), 6.6), sharey=True, squeeze=False)
     y = np.arange(len(COMPARISON_MODELS))[::-1]
     for row, (setting, slabel) in enumerate(SETTINGS):
@@ -470,13 +474,16 @@ def comparison_plot(t, metrics, name, note):
             ax.grid(axis="x", visible=True)
             ax.margins(x=0.22, y=0.1)
             if row == 1:
-                ax.set_xlabel(xlabel)
+                ax.set_xlabel(f"{xlabel}, throughput 3")
             ax.set_title(f"{'AB'[row]}{col + 1}. {slabel}: {xlabel}", fontsize=10)
         axes[row, 0].set_yticks(y, [m[2] for m in COMPARISON_MODELS])
-    fig.suptitle("DBN and other models on identical test samples (throughput 3)", x=0.01, ha="left", fontsize=12,
+    fig.suptitle("DBN and other models on identical test samples", x=0.01, ha="left", fontsize=12,
                  fontweight="bold")
-    fig.text(0.01, 0.01, f"2,000 test samples per fold, 5 folds x 3 load patterns; {note}bars: 95% intervals "
-             "(bootstrap over schedule positions); n/a: point forecast, no probabilities", color=MUTED, fontsize=8)
+    handles = [plt.Line2D([], [], marker="o", ls="", color=NEUTRAL, markersize=7, markeredgecolor=SURFACE,
+                          label="value on the pooled test samples"),
+               plt.Line2D([], [], color=NEUTRAL, lw=2, alpha=0.5, label="95% interval")]
+    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.005, 0.0), ncols=2, fontsize=8.5,
+               frameon=False)
     fig.tight_layout(rect=(0, 0.04, 1, 0.95))
     save(fig, name)
 
