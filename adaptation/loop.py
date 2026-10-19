@@ -21,6 +21,7 @@ decision when there was one); summary() turns a log into the run's metrics.
 Usage:
     python adaptation/loop.py --sim [--minutes 60] [--planner dbn|static]
     python adaptation/loop.py --live --minutes 60      # on the lab machine only
+    python adaptation/loop.py --live --minutes 10 --patterns periodic   # a short test
 """
 import argparse
 import json
@@ -209,6 +210,7 @@ def main():
     mode.add_argument("--sim", action="store_true")
     mode.add_argument("--live", action="store_true")
     ap.add_argument("--minutes", type=float, default=60, help="minutes per load pattern")
+    ap.add_argument("--patterns", default=",".join(PATTERNS), help="comma-separated, in order")
     ap.add_argument("--planner", default="dbn", choices=["dbn", "static"])
     ap.add_argument("--bins", type=int, default=PL.PLANNER_BINS, help="bins of the planner's chain (0 = the model's)")
     ap.add_argument("--seed", type=int, default=0)
@@ -218,7 +220,8 @@ def main():
     model = B.Model.load(str(DEFAULT_MODEL))
     plan = PL.Planner(model, PL.load_chain(PL.chain_path(DEFAULT_MODEL, args.bins or None))).decide \
         if args.planner == "dbn" else None
-    program = LoadProgram(seconds=int(args.minutes * 60))
+    patterns = tuple(args.patterns.split(","))
+    program = LoadProgram(patterns, seconds=int(args.minutes * 60))
 
     if args.sim:
         from simulator import SimulatedChain
