@@ -29,7 +29,7 @@ Every second is written to a JSON-lines log (one dict per second, with the
 decision when there was one); summary() turns a log into the run's metrics.
 
 Usage:
-    python adaptation/loop.py --sim [--minutes 60] [--planner dbn|minrule|static|vpa]
+    python adaptation/loop.py --sim [--minutes 60] [--planner dbn|minrule|static|vpa|tabpfn]
     python adaptation/loop.py --live --minutes 60      # on the lab machine only
     python adaptation/loop.py --live --minutes 10 --patterns periodic   # a short test
 """
@@ -251,7 +251,7 @@ def main():
     mode.add_argument("--live", action="store_true")
     ap.add_argument("--minutes", type=float, default=60, help="minutes per load pattern")
     ap.add_argument("--patterns", default=",".join(PATTERNS), help="comma-separated, in order")
-    ap.add_argument("--planner", default="dbn", choices=["dbn", "minrule", "static", "vpa"])
+    ap.add_argument("--planner", default="dbn", choices=["dbn", "minrule", "static", "vpa", "tabpfn"])
     ap.add_argument("--bins", type=int, default=PL.PLANNER_BINS, help="bins of the planner's chain (0 = the model's)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
@@ -266,6 +266,9 @@ def main():
         plan = PL.Planner(model, PL.load_chain(PL.chain_path(DEFAULT_MODEL, args.bins or None))).decide
     elif args.planner == "minrule":
         plan = BL.MinRulePlanner(model).decide
+    elif args.planner == "tabpfn":
+        import tabpfn_planner as TP
+        plan = TP.TabPFNPlanner(model).decide
     elif args.planner in ("static", "vpa"):
         start, u = BL.static_best(model, [program(t)[1] for t in range(program.duration)])
         print(f"start configuration {start} (static_best), mean min-rule utility over the program {u:.3f}")
