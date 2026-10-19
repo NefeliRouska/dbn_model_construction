@@ -16,7 +16,8 @@ per second, on the live chain or on the simulator.
   Knowledge the model, the planner's settled chain and the log of every second
 
 The load follows a program: the training patterns one after another
-(workload_rps of the orchestrator), each from its own start.
+(workload_rps of the orchestrator), each from its own start, and optionally
+the unseen diurnal and bursty patterns of load_patterns.py.
 
 Every second is written to a JSON-lines log (one dict per second, with the
 decision when there was one); summary() turns a log into the run's metrics.
@@ -43,6 +44,7 @@ sys.path.insert(0, str(REPO / "dbn"))
 sys.path.insert(0, str(REPO / "data_collection"))
 sys.path.insert(0, str(HERE))
 import build_model as B  # noqa: E402
+import load_patterns as LP  # noqa: E402
 import planner as PL  # noqa: E402
 from check_monitor import DEFAULT_MODEL  # noqa: E402
 
@@ -78,7 +80,10 @@ class LoadProgram:
 
     def __call__(self, t):
         k = min(int(t // self.seconds), len(self.patterns) - 1)
-        return self.patterns[k], self.workload_rps(self.patterns[k], t - k * self.seconds, self.seed)
+        name, local = self.patterns[k], t - k * self.seconds
+        if name in LP.PATTERNS:                        # the unseen patterns (load_patterns.py)
+            return name, LP.load(name, local, self.seed)
+        return name, self.workload_rps(name, local, self.seed)
 
 
 class Analyzer:
