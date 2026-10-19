@@ -29,7 +29,7 @@ Every second is written to a JSON-lines log (one dict per second, with the
 decision when there was one); summary() turns a log into the run's metrics.
 
 Usage:
-    python adaptation/loop.py --sim [--minutes 60] [--planner dbn|minrule|static|vpa|tabpfn]
+    python adaptation/loop.py --sim [--minutes 60] [--planner dbn|minrule|static|vpa|tabpfn|rask]
     python adaptation/loop.py --live --minutes 60      # on the lab machine only
     python adaptation/loop.py --live --minutes 10 --patterns periodic   # a short test
 """
@@ -188,13 +188,17 @@ def peak_rss_mb():
     return r / 2**20 if sys.platform == "darwin" else r / 2**10        # bytes on macOS, KB on Linux
 
 
-def run(system, plan, program, log_path, start=START):
+def run(system, plan, program, log_path, start=START, observe=None, every=None, on_apply=None):
     """
     One episode. plan(load, current, row) -> decision dict (planner.Planner.decide's
     shape) or None for a planner that never acts; start: the configuration
     applied before the first second.
+
+    For an agent with its own cycle (RASK): observe(t, row) is called every
+    second, plan every `every` seconds instead of through the Analyzer, and
+    on_apply(t) after each change.
     """
-    analyzer, last_load, t0 = Analyzer(), None, None
+    analyzer, last_load, t0, last_cycle = Analyzer(), None, None, -np.inf
     log_path.parent.mkdir(parents=True, exist_ok=True)
     system.apply(start)
     with open(log_path, "w") as log:
@@ -206,10 +210,16 @@ def run(system, plan, program, log_path, start=START):
             ts, row = system.read()
             t0 = ts if t0 is None else t0
             analyzer.update(t, row)
+            if observe is not None:
+                observe(t, row)
             rec = dict(t=t, ts=ts, pattern=pattern, load_set=load, **row,
                        completion=completion(row), utility=utility(row),
                        cpu_s=time.process_time(), rss_mb=peak_rss_mb())
-            why = analyzer.reason(t, row)
+            if every is None:
+                why = analyzer.reason(t, row)
+            else:
+                why = "cycle" if t >= FAIL_SECONDS and t - last_cycle >= every else None
+                last_cycle = t if why else last_cycle
             if why is not None and plan is not None:
                 current = {c: int(row[c]) for c in PL.SETTINGS}
                 t_plan = time.perf_counter()
@@ -218,9 +228,11 @@ def run(system, plan, program, log_path, start=START):
                 rec.update(event=why, planned_load=analyzer.load(), plan_ms=round((time.perf_counter() - t_plan) * 1000, 1),
                            act=d["act"], new_config=d["config"] if d["act"] else None,
                            predicted_completion=d["completion"], predicted_utility=d["utility"],
-                           current_predicted_completion=d["completion_current"])
+                           current_predicted_completion=d["completion_current"], agent_event=d.get("rask"))
                 if d["act"]:
                     system.apply(d["config"])
+                    if on_apply is not None:
+                        on_apply(t)
                 analyzer.planned(t, row, d["act"])
             log.write(json.dumps(rec, default=float) + "\n")
     return log_path
@@ -251,8 +263,9 @@ def main():
     mode.add_argument("--live", action="store_true")
     ap.add_argument("--minutes", type=float, default=60, help="minutes per load pattern")
     ap.add_argument("--patterns", default=",".join(PATTERNS), help="comma-separated, in order")
-    ap.add_argument("--planner", default="dbn", choices=["dbn", "minrule", "static", "vpa", "tabpfn"])
+    ap.add_argument("--planner", default="dbn", choices=["dbn", "minrule", "static", "vpa", "tabpfn", "rask"])
     ap.add_argument("--bins", type=int, default=PL.PLANNER_BINS, help="bins of the planner's chain (0 = the model's)")
+    ap.add_argument("--rask-degree", type=int, default=2, help="RASK: degree of its polynomial regressions")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
@@ -261,11 +274,15 @@ def main():
     import baselines as BL
     patterns = tuple(args.patterns.split(","))
     program = LoadProgram(patterns, seconds=int(args.minutes * 60))
-    start, plan = START, None
+    start, plan, hooks = START, None, {}
     if args.planner == "dbn":
         plan = PL.Planner(model, PL.load_chain(PL.chain_path(DEFAULT_MODEL, args.bins or None))).decide
     elif args.planner == "minrule":
         plan = BL.MinRulePlanner(model).decide
+    elif args.planner == "rask":
+        import rask as RK
+        agent = RK.RaskPlanner(seed=args.seed, degree=args.rask_degree)
+        plan, hooks = agent.decide, dict(observe=agent.observe, every=agent.every, on_apply=agent.applied)
     elif args.planner == "tabpfn":
         import tabpfn_planner as TP
         plan = TP.TabPFNPlanner(model).decide
@@ -282,13 +299,13 @@ def main():
         system = LiveChain()
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    bins = f"_{args.bins or 20}bins" if args.planner == "dbn" else ""
+    bins = f"_{args.bins or 20}bins" if args.planner == "dbn" else f"_deg{args.rask_degree}" if args.planner == "rask" else ""
     pats = "-".join(p[:4] for p in patterns)
     name = f"{'sim' if args.sim else 'live'}_{args.planner}{bins}_{int(args.minutes)}min_seed{args.seed}_{pats}{args.tag}_{stamp}"
     k = 1
     while (RESULTS / f"{name}.jsonl").exists():           # never overwrite a run
         name, k = f"{name.rsplit('_n', 1)[0]}_n{k}", k + 1
-    log = run(system, plan, program, RESULTS / f"{name}.jsonl", start)
+    log = run(system, plan, program, RESULTS / f"{name}.jsonl", start, **hooks)
     print(f"log: {log}")
     print(summary(log).round(3).to_string())
 

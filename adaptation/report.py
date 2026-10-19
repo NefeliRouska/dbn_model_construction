@@ -40,8 +40,9 @@ HIGH_LOAD = 0.4
 SMOOTH = 60
 # one colour per planner, fixed, in the categorical order of the paper figures
 PLANNERS = {"dbn": ("DBN", "#2a78d6"), "minrule": ("min rule", "#eb6834"), "static": ("static", "#1baf7a"),
-            "vpa": ("VPA", "#eda100"), "tabpfn": ("TabPFN v3.5", "#e87ba4"), "rask": ("RASK", "#008300")}
-NAME_RE = re.compile(r"^(?P<mode>sim|live)_(?P<planner>[a-z]+)(?:_\d+bins)?_(?P<minutes>\d+)min_seed(?P<seed>\d+)")
+            "vpa": ("VPA", "#eda100"), "tabpfn": ("TabPFN v3.5", "#e87ba4"), "rask_deg2": ("RASK", "#008300"),
+            "rask_deg4": ("RASK, degree 4", "#4a3aa7")}
+NAME_RE = re.compile(r"^(?P<mode>sim|live)_(?P<planner>[a-z]+)(?:_\d+bins|_deg(?P<deg>\d+))?_(?P<minutes>\d+)min_seed(?P<seed>\d+)")
 
 
 def load_runs(paths):
@@ -52,7 +53,7 @@ def load_runs(paths):
             print(f"skipped (name not understood): {p.name}")
             continue
         df = pd.read_json(p, lines=True)
-        df["planner"], df["run"] = m["planner"], p.stem
+        df["planner"], df["run"] = m["planner"] + (f"_deg{m['deg']}" if m["deg"] else ""), p.stem
         runs.append(df)
     df = pd.concat(runs, ignore_index=True)
     df["cores"] = df[["cores_1", "cores_2", "cores_3"]].sum(axis=1)

@@ -11,7 +11,10 @@ behave plausibly enough to exercise every code path of the loop:
                (buffer_size_1 is the load setpoint in the real data too)
   service 2,3  queue what arrives, emit min(queue + arrivals, capacity_i)
   settings     take effect APPLY_DELAY seconds after they are sent
-  latency      a placeholder that grows with quality and the queue
+  latency      the processing time of one item, 1000 / r(q) ms with noise, rounded
+               to whole ms like the real metric (on the testbed 1000 / latency
+               x cores matches the capacity: 22-23 ms at quality 700, where r is
+               45 per core); RASK learns its capacities from it
 
 It offers the same two calls as the live system: read() -> (timestamp, row in
 the Monitor's columns) and apply(config) / set_load(rps).
@@ -59,7 +62,7 @@ class SimulatedChain:
             row[f"throughput_{i}"] = round(tp[i])
             row[f"cores_{i}"] = c[f"cores_{i}"]
             row[f"data_quality_{i}"] = c[f"data_quality_{i}"]
-            q = self.queue.get(i, 0.0)
-            row[f"avg_p_latency_{i}"] = round(c[f"data_quality_{i}"] / 40 + q / max(cap[i], 1) * 1000)
+            per_item = 1000.0 / self.rate[float(c[f"data_quality_{i}"])]
+            row[f"avg_p_latency_{i}"] = max(1, round(per_item * max(0.5, 1 + NOISE * self.rng.standard_normal())))
         row["buffer_size_2"], row["buffer_size_3"] = round(self.queue[2]), round(self.queue[3])
         return self.t, row
