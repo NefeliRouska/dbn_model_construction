@@ -4,9 +4,12 @@ per second, on the live chain or on the simulator.
 
   Monitor   monitor.query_now (live) / SimulatedChain.read: one row per second
   Analyze   Analyzer: act only after the cooldown, and only when the chain is
-            failing (completion tp3/load below FAIL_BELOW, mean of the last
-            FAIL_SECONDS seconds) or the load has moved by more than
-            LOAD_CHANGE since the last plan
+            failing (completion tp3/load below FAIL_BELOW, median of the last
+            FAIL_SECONDS seconds: the services stall for 1-2 s now and then,
+            ~1% of seconds in the training data, and a mean would call that a
+            failure) or the load has moved by more than LOAD_CHANGE since the
+            last plan. The first plan waits FAIL_SECONDS seconds, so the
+            Monitor already sees the load that was set.
   Plan      planner.Planner.decide (expected SLO utility over 12,320 configurations)
   Execute   Executor: the API calls of data_collection/experiment_orchestrator.py,
             cores lowered before others are raised so the budget of 8 holds
@@ -44,7 +47,7 @@ from check_monitor import DEFAULT_MODEL  # noqa: E402
 
 RESULTS = REPO / "results" / "adaptation_loop"
 
-FAIL_BELOW, FAIL_SECONDS = 0.97, 5     # failing: mean completion of the last 5 s below 0.97
+FAIL_BELOW, FAIL_SECONDS = 0.97, 5     # failing: median completion of the last 5 s below 0.97
 LOAD_CHANGE = 0.10                     # re-plan when the load moved by more than 10%
 COOLDOWN = 30                          # seconds after an action before the next one
 RECHECK = 10                           # seconds between plans that end without an action
@@ -87,13 +90,13 @@ class Analyzer:
 
     def reason(self, t, row):
         """Why the loop should plan now, or None."""
-        if t - self.last_action < self.cooldown:
+        if t - self.last_action < self.cooldown or len(self.recent) < self.fail_seconds:
             return None
         if self.planned_load is None:
             return "start"
         if abs(row["rps"] - self.planned_load) > self.load_change * max(self.planned_load, 1.0):
             return "load changed"
-        failing = len(self.recent) == self.fail_seconds and np.mean(self.recent) < self.fail_below
+        failing = np.median(self.recent) < self.fail_below
         if failing and t - self.last_plan >= self.recheck:
             return "failing"
         return None
