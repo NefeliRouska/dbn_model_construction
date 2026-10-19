@@ -3,7 +3,7 @@ loop.py -- the MAPE-K adaptation loop: Monitor, Analyze, Plan, Execute, once
 per second, on the live chain or on the simulator.
 
   Monitor   monitor.query_now (live) / SimulatedChain.read: one row per second
-  Analyze   Analyzer: act only after the cooldown, and only when the chain is
+  Analyze   Analyzer: act only after the cooldown (COOLDOWN s after an action), and only when the chain is
             failing (completion tp3/load below FAIL_BELOW, median of the last
             FAIL_SECONDS seconds: the services stall for 1-2 s now and then,
             ~1% of seconds in the training data, and a mean would call that a
@@ -28,6 +28,7 @@ Usage:
 """
 import argparse
 import json
+import resource
 import sys
 import time
 from datetime import datetime
@@ -49,7 +50,9 @@ RESULTS = REPO / "results" / "adaptation_loop"
 
 FAIL_BELOW, FAIL_SECONDS = 0.97, 5     # failing: median completion of the last 5 s below 0.97
 LOAD_CHANGE = 0.10                     # re-plan when the load moved by more than 10%
-COOLDOWN = 30                          # seconds after an action before the next one
+COOLDOWN = 10                          # seconds after an action before the next one: on the testbed a
+                                       # change settles within 5-8 s (calibrate_live.py), and Sedlak et
+                                       # al. act every 10 s
 RECHECK = 10                           # seconds between plans that end without an action
 PATTERNS = ("periodic", "once_in_a_lifetime", "unpredictable")
 START = dict(cores_1=3, cores_2=3, cores_3=2, data_quality_1=600, data_quality_2=500, data_quality_3=400)
@@ -153,6 +156,12 @@ class LiveChain:
         return ts, row
 
 
+def peak_rss_mb():
+    """Peak resident memory of this process (the loop, with the model and the planner) in MB."""
+    r = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return r / 2**20 if sys.platform == "darwin" else r / 2**10        # bytes on macOS, KB on Linux
+
+
 def run(system, plan, program, log_path, start=START):
     """
     One episode. plan(load, current, row) -> decision dict (planner.Planner.decide's
@@ -172,7 +181,8 @@ def run(system, plan, program, log_path, start=START):
             t0 = ts if t0 is None else t0
             analyzer.update(t, row)
             rec = dict(t=t, ts=ts, pattern=pattern, load_set=load, **row,
-                       completion=completion(row), utility=utility(row))
+                       completion=completion(row), utility=utility(row),
+                       cpu_s=time.process_time(), rss_mb=peak_rss_mb())
             why = analyzer.reason(t, row)
             if why is not None and plan is not None:
                 current = {c: int(row[c]) for c in PL.SETTINGS}
