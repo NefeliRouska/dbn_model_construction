@@ -67,6 +67,12 @@ PATTERNS = ("periodic", "once_in_a_lifetime", "unpredictable")
 START = dict(cores_1=3, cores_2=3, cores_3=2, data_quality_1=600, data_quality_2=500, data_quality_3=400)
 
 
+def setting(v):
+    """A setting as the services take it: whole numbers stay int, fractional cores keep 2 decimals."""
+    v = round(float(v), 2)
+    return int(v) if v == int(v) else v
+
+
 def completion(row):
     return min(row["throughput_3"] / row["rps"], 1.0) if row["rps"] > 0 else 1.0
 
@@ -152,10 +158,10 @@ class Executor:
         order = sorted((1, 2, 3), key=lambda i: config[f"cores_{i}"] - current[f"cores_{i}"])
         for i in order:
             if config[f"cores_{i}"] != current[f"cores_{i}"]:
-                self.set_cores(self.services[i - 1], int(config[f"cores_{i}"]))
+                self.set_cores(self.services[i - 1], setting(config[f"cores_{i}"]))
         for i in (1, 2, 3):
             if config[f"data_quality_{i}"] != current[f"data_quality_{i}"]:
-                self.set_quality(self.services[i - 1], int(config[f"data_quality_{i}"]))
+                self.set_quality(self.services[i - 1], int(round(config[f"data_quality_{i}"])))
 
 
 class LiveChain:
@@ -221,7 +227,7 @@ def run(system, plan, program, log_path, start=START, observe=None, every=None, 
                 why = "cycle" if t >= FAIL_SECONDS and t - last_cycle >= every else None
                 last_cycle = t if why else last_cycle
             if why is not None and plan is not None:
-                current = {c: int(row[c]) for c in PL.SETTINGS}
+                current = {c: setting(row[c]) for c in PL.SETTINGS}
                 t_plan = time.perf_counter()
                 observed = float(np.median(analyzer.recent)) if why == "failing" else None
                 d = plan(analyzer.load(), current, row=row, observed=observed)
@@ -266,6 +272,14 @@ def main():
     ap.add_argument("--planner", default="dbn", choices=["dbn", "minrule", "static", "vpa", "tabpfn", "rask"])
     ap.add_argument("--bins", type=int, default=PL.PLANNER_BINS, help="bins of the planner's chain (0 = the model's)")
     ap.add_argument("--rask-degree", type=int, default=2, help="RASK: degree of its polynomial regressions")
+    ap.add_argument("--rask-oracle", action="store_true",
+                    help="diagnostic: RASK gets the true capacities (simulator) instead of learning them")
+    ap.add_argument("--rask-chain-aware", action="store_true",
+                    help="diagnostic: RASK computes each service's arrivals through the chain")
+    ap.add_argument("--rask-end-to-end", action="store_true",
+                    help="diagnostic: RASK maximises the loop's end-to-end utility instead of its per-service SLOs")
+    ap.add_argument("--rask-plain-phi", action="store_true",
+                    help="diagnostic: min(x, 1) instead of smoothstep in RASK's end-to-end objective")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
@@ -281,7 +295,10 @@ def main():
         plan = BL.MinRulePlanner(model).decide
     elif args.planner == "rask":
         import rask as RK
-        agent = RK.RaskPlanner(seed=args.seed, degree=args.rask_degree)
+        agent = RK.RaskPlanner(seed=args.seed, degree=args.rask_degree,
+                               oracle_rate=model.capacity["rate"] if args.rask_oracle else None,
+                               chain_aware=args.rask_chain_aware, end_to_end=args.rask_end_to_end,
+                               plain_phi=args.rask_plain_phi)
         plan, hooks = agent.decide, dict(observe=agent.observe, every=agent.every, on_apply=agent.applied)
     elif args.planner == "tabpfn":
         import tabpfn_planner as TP
@@ -299,7 +316,7 @@ def main():
         system = LiveChain()
 
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    bins = f"_{args.bins or 20}bins" if args.planner == "dbn" else f"_deg{args.rask_degree}" if args.planner == "rask" else ""
+    bins = f"_{args.bins or 20}bins" if args.planner == "dbn" else ((f"_oracle" if args.rask_oracle else f"_deg{args.rask_degree}") + ("chain" if args.rask_chain_aware else "") + ("e2e" if args.rask_end_to_end else "") + ("plain" if args.rask_plain_phi else "")) if args.planner == "rask" else ""
     pats = "-".join(p[:4] for p in patterns)
     name = f"{'sim' if args.sim else 'live'}_{args.planner}{bins}_{int(args.minutes)}min_seed{args.seed}_{pats}{args.tag}_{stamp}"
     k = 1

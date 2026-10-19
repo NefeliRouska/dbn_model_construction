@@ -6,7 +6,9 @@ It is NOT a model of the testbed to draw conclusions from; it only has to
 behave plausibly enough to exercise every code path of the loop:
 
   capacity_i   cores_i x r(q_i), with r learned from the data (the model's
-               capacity function), times a little noise each second
+               capacity function, interpolated linearly between its quality
+               levels for the fractional settings RASK sends), times a little
+               noise each second
   service 1    emits min(load, capacity_1); the excess is not queued
                (buffer_size_1 is the load setpoint in the real data too)
   service 2,3  queue what arrives, emit min(queue + arrivals, capacity_i)
@@ -36,6 +38,11 @@ class SimulatedChain:
         self.queue = {2: 0.0, 3: 0.0}
         self.n_applied = 0
 
+    def r(self, q):
+        """Requests per core per second at quality q, interpolated between the levels of the data."""
+        qs = sorted(self.rate)
+        return float(np.interp(float(q), qs, [self.rate[k] for k in qs]))
+
     # ---- the interface the loop uses ----
     def set_load(self, rps):
         self.load = float(rps)
@@ -50,7 +57,7 @@ class SimulatedChain:
         while self.pending and self.pending[0][0] <= self.t:
             self.config = self.pending.pop(0)[1]
         c = self.config
-        cap = {i: c[f"cores_{i}"] * self.rate[float(c[f"data_quality_{i}"])]
+        cap = {i: c[f"cores_{i}"] * self.r(c[f"data_quality_{i}"])
                * max(0.0, 1 + NOISE * self.rng.standard_normal()) for i in (1, 2, 3)}
         tp = {1: min(self.load, cap[1])}
         for i in (2, 3):
@@ -62,7 +69,7 @@ class SimulatedChain:
             row[f"throughput_{i}"] = round(tp[i])
             row[f"cores_{i}"] = c[f"cores_{i}"]
             row[f"data_quality_{i}"] = c[f"data_quality_{i}"]
-            per_item = 1000.0 / self.rate[float(c[f"data_quality_{i}"])]
+            per_item = 1000.0 / self.r(c[f"data_quality_{i}"])
             row[f"avg_p_latency_{i}"] = max(1, round(per_item * max(0.5, 1 + NOISE * self.rng.standard_normal())))
         row["buffer_size_2"], row["buffer_size_3"] = round(self.queue[2]), round(self.queue[3])
         return self.t, row

@@ -41,8 +41,12 @@ SMOOTH = 60
 # one colour per planner, fixed, in the categorical order of the paper figures
 PLANNERS = {"dbn": ("DBN", "#2a78d6"), "minrule": ("min rule", "#eb6834"), "static": ("static", "#1baf7a"),
             "vpa": ("VPA", "#eda100"), "tabpfn": ("TabPFN v3.5", "#e87ba4"), "rask_deg2": ("RASK", "#008300"),
-            "rask_deg4": ("RASK, degree 4", "#4a3aa7")}
-NAME_RE = re.compile(r"^(?P<mode>sim|live)_(?P<planner>[a-z]+)(?:_\d+bins|_deg(?P<deg>\d+))?_(?P<minutes>\d+)min_seed(?P<seed>\d+)")
+            "rask_deg4": ("RASK, degree 4", "#4a3aa7"), "rask_oracle": ("RASK, true capacities", "#e34948"),
+            "rask_oracle_chain": ("RASK, true capacities, chain-aware", "#9085e9"),
+            "rask_oracle_e2e": ("RASK, true capacities, end-to-end goal", "#1c5cab"),
+            "rask_deg2_e2e": ("RASK, end-to-end goal", "#86b6ef"),
+            "rask_oracle_e2e_plain": ("RASK, true capacities, end-to-end goal, min(x,1)", "#eb6834")}
+NAME_RE = re.compile(r"^(?P<mode>sim|live)_(?P<planner>[a-z]+)(?:_\d+bins|_deg(?P<deg>\d+)|(?P<oracle>_oracle))?(?P<chain>chain)?(?P<e2e>e2e)?(?P<plain>plain)?_(?P<minutes>\d+)min_seed(?P<seed>\d+)")
 
 
 def load_runs(paths):
@@ -53,7 +57,8 @@ def load_runs(paths):
             print(f"skipped (name not understood): {p.name}")
             continue
         df = pd.read_json(p, lines=True)
-        df["planner"], df["run"] = m["planner"] + (f"_deg{m['deg']}" if m["deg"] else ""), p.stem
+        df["planner"] = m["planner"] + (f"_deg{m['deg']}" if m["deg"] else "") + (m["oracle"] or "") + ("_chain" if m["chain"] else "") + ("_e2e" if m["e2e"] else "") + ("_plain" if m["plain"] else "")
+        df["run"] = p.stem
         runs.append(df)
     df = pd.concat(runs, ignore_index=True)
     df["cores"] = df[["cores_1", "cores_2", "cores_3"]].sum(axis=1)

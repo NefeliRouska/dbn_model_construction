@@ -33,9 +33,11 @@ What the chain changes:
     independent, as in the paper ("we assumed completely independent
     services"); it does not know that more cores at service 3 are useless when
     service 1 is the bottleneck. That assumption is what the chain tests.
-  - cores are whole numbers on our services (rounded by largest remainder to
-    sum 8, at least 1 each) and quality is rounded to steps of 100, the levels
-    of our capacity function and training data.
+  - nothing else: like in its paper, RASK sends its continuous solution as
+    is; the services take fractional cores (2 decimals) and any whole-number
+    quality (Service_Wrapper.resource_scaling / quality_scaling of the
+    workbench). (A first port rounded to whole cores and quality steps of 100,
+    the grid of our training data; that handicapped RASK and was removed.)
   - its Gaussian exploration noise eta is 0 (the paper's choice).
   - one episode plays several load patterns; RASK explores once, at the start
     of the episode, and keeps everything it has learned across patterns
@@ -62,25 +64,35 @@ def smoothstep(x):
     return t * t * (3 - 2 * t)
 
 
-def round_cores(c, total=TOTAL_CORES):
-    """Whole cores, at least 1 each, summing to `total` (largest remainder)."""
-    c = np.maximum(np.asarray(c, dtype=float), 1.0)
-    c = c / c.sum() * total
-    base = np.maximum(np.floor(c).astype(int), 1)
-    while base.sum() > total:
-        base[np.argmax(base)] -= 1
-    for i in np.argsort(-(c - np.floor(c))):
-        if base.sum() >= total:
-            break
-        base[i] += 1
-    return base
-
-
 class RaskPlanner:
     every = EVERY
 
-    def __init__(self, max_explore=MAX_EXPLORE, seed=0, degree=2):
+    def __init__(self, max_explore=MAX_EXPLORE, seed=0, degree=2, oracle_rate=None, chain_aware=False, end_to_end=False, plain_phi=False):
+        """
+        oracle_rate: None (RASK as published), or {quality: req/s per core}. A
+        diagnostic only: RASK is then given the true capacity cores x r(q)
+        (r interpolated linearly between the quality levels) instead of
+        learning it, and skips exploration; everything else is unchanged. It
+        separates RASK's two possible weaknesses, its learned curves and its
+        view of the services as independent.
+        chain_aware: diagnostic only. The arrivals of service i are then what
+        the services before it can pass for the candidate configuration,
+        min(load, max_tp_1, ..., max_tp_{i-1}), instead of the measured
+        throughput of service i-1.
+        """
+        self.chain_aware = chain_aware
+        # end_to_end: diagnostic only. The objective is then the loop's
+        # utility shape: one completion SLO, throughput_3 / load, through the
+        # chain (weight 3 x 1.0), and the three quality SLOs (0.5 each), each
+        # through smoothstep as RASK does; solver, rounding and data unchanged.
+        self.end_to_end = end_to_end
+        # plain_phi: diagnostic only; min(x, 1), the paper's SLO fulfillment,
+        # in place of the code's smoothstep inside RASK's objective
+        self.phi = (lambda x: float(np.clip(x, 0.0, 1.0))) if plain_phi else smoothstep
         self.max_explore, self.rng, self.degree = max_explore, random.Random(seed), degree
+        self.oracle_rate = oracle_rate
+        if oracle_rate is not None:
+            self.max_explore = 0
         self.explored, self.history, self.last_change, self.last_x = 0, [], -np.inf, None
 
     # ---- what it observes, every second ----
@@ -90,6 +102,10 @@ class RaskPlanner:
 
     # ---- its models ----
     def _fit(self):
+        if self.oracle_rate is not None:
+            qs = np.array(sorted(self.oracle_rate))
+            rs = np.array([self.oracle_rate[q] for q in qs])
+            return [lambda c, q: c * float(np.interp(q, qs, rs))] * 3
         models = []
         for i in (1, 2, 3):
             rows = [r for r in self.history if r[f"avg_p_latency_{i}"] > 0]
@@ -98,15 +114,26 @@ class RaskPlanner:
             X = np.array([[r[f"cores_{i}"], r[f"data_quality_{i}"]] for r in rows], dtype=float)
             y = np.array([1000.0 / r[f"avg_p_latency_{i}"] * r[f"cores_{i}"] for r in rows])
             poly = PolynomialFeatures(degree=self.degree, include_bias=False)
-            models.append((poly, LinearRegression().fit(poly.fit_transform(X), y)))
+            reg = LinearRegression().fit(poly.fit_transform(X), y)
+            models.append(lambda c, q, poly=poly, reg=reg: float(reg.predict(poly.transform([[c, q]]))[0]))
         return models
 
-    @staticmethod
-    def _slo_f(models, x, rps):
-        total = 0.0
-        for i, (poly, reg) in enumerate(models):
+    def _slo_f(self, models, x, rps):
+        if self.end_to_end:
+            flow = rps[0]
+            for i, predict in enumerate(models):
+                flow = min(flow, max(predict(x[2 * i + 1], x[2 * i]), 0.0))
+            completion = flow / rps[0] if rps[0] > 0 else 1.0
+            quality = sum(self.phi(x[2 * i] / Q_TARGET) for i in range(3))
+            return (3 * W_C * self.phi(completion) + W_Q * quality) / (3 * W_C + 3 * W_Q)
+        total, flow = 0.0, rps[0]
+        for i, predict in enumerate(models):
             q, c = x[2 * i], x[2 * i + 1]
-            max_tp = float(reg.predict(poly.transform([[c, q]]))[0])
+            max_tp = predict(c, q)
+            if self.chain_aware:
+                rps = list(rps)
+                rps[i] = flow
+                flow = min(flow, max_tp)
             tp = max_tp if max_tp > 1 else 0.0
             if tp < 1.0:
                 continue
@@ -125,7 +152,7 @@ class RaskPlanner:
             for k, i in enumerate(order):
                 max_cores = max(1, TOTAL_CORES - assigned + (k - 2))
                 new[f"cores_{i}"] = self.rng.randint(1, max_cores)
-                new[f"data_quality_{i}"] = int(round(self.rng.randint(Q_MIN, Q_MAX), -2))
+                new[f"data_quality_{i}"] = self.rng.randint(Q_MIN, Q_MAX)
                 assigned += new[f"cores_{i}"]
             event = "explore"
         else:
@@ -146,9 +173,10 @@ class RaskPlanner:
                 return dict(act=False, config=current, completion=nan, utility=nan, completion_current=nan,
                             utility_current=nan, probs=None, rask=f"solver: {res.message}")
             self.last_x = list(res.x)
-            cores = round_cores([res.x[1], res.x[3], res.x[5]])
-            new = {f"cores_{i}": int(cores[i - 1]) for i in (1, 2, 3)}
-            new |= {f"data_quality_{i}": int(np.clip(round(res.x[2 * (i - 1)], -2), Q_MIN, Q_MAX)) for i in (1, 2, 3)}
+            cores = np.clip([res.x[1], res.x[3], res.x[5]], 1.0, TOTAL_CORES)
+            cores = np.floor(cores / max(cores.sum() / TOTAL_CORES, 1.0) * 100) / 100     # 2 decimals, sum <= 8
+            new = {f"cores_{i}": float(cores[i - 1]) for i in (1, 2, 3)}
+            new |= {f"data_quality_{i}": int(np.clip(round(res.x[2 * (i - 1)]), Q_MIN, Q_MAX)) for i in (1, 2, 3)}
             event = "optimise"
         act = new != {c: current[c] for c in SETTINGS}
         return dict(act=act, config=new, completion=nan, utility=nan, completion_current=nan,
