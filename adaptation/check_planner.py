@@ -18,8 +18,8 @@ check_planner.py -- offline checks of the Plan step.
 Checks 2 to 4 are run with the model's own chain and with the settled chain
 (planner.py), side by side.
 
-Usage:
-    python adaptation/check_planner.py
+Usage: python adaptation/check_planner.py [bins of the settled chain, 0 = the model's; default 50]
+
 """
 import sys
 import time
@@ -55,7 +55,7 @@ def check(name, planner, df, drain):
     odd = B.add_capacity(pd.DataFrame([BOTTLENECK]), planner.model.capacity)
     P = planner.throughput_3(200, odd)[0]
     print(f"[bottleneck] capacity_1 {odd['capacity_1'].iloc[0]:.0f} req/s, load 200: "
-          f"E[throughput_3] {P @ planner.node.bin_value:.0f} req/s")
+          f"E[throughput_3] {P @ planner.bin_value:.0f} req/s")
 
     pred = np.empty(len(df))
     for load, g in df.groupby(D.LOAD_COL):
@@ -71,10 +71,9 @@ def check(name, planner, df, drain):
                                                measured=("measured", "mean")).round(3).to_string())
 
 
-def main():
+def main(n_bins=PL.PLANNER_BINS):
     model = B.Model.load(str(DEFAULT_MODEL))
-    tables = pd.read_pickle(DEFAULT_MODEL.with_name(DEFAULT_MODEL.stem + "_planner_chain.pkl"))["tables"]
-    settled = PL.Planner(model, tables)
+    settled = PL.Planner(model, PL.load_chain(PL.chain_path(DEFAULT_MODEL, n_bins)))
     print(f"{len(settled.cands)} candidates")
 
     t0 = time.perf_counter()
@@ -88,8 +87,8 @@ def main():
     df, drain = df[keep], drain[keep]
 
     check("model's own chain", PL.Planner(model), df, drain)
-    check("settled chain (planner.py)", settled, df, drain)
+    check(f"settled chain (planner.py), {len(settled.edges) + 1} bins", settled, df, drain)
 
 
 if __name__ == "__main__":
-    main()
+    main((int(sys.argv[1]) or None) if len(sys.argv) > 1 else PL.PLANNER_BINS)

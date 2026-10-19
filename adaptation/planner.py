@@ -25,6 +25,10 @@ the question the planner asks -- what a configuration delivers once settled:
     instead of single seconds: a queue of a few hundred requests lets a service
     emit far more than it receives for a few seconds, and the per-second
     tables learned those bursts;
+  - with PLANNER_BINS bins of 10 req/s instead of the model's 20 of 25: with
+    20, a capacity of 181 for a load of 196 falls in the load's bin and looks
+    like full completion (simulator: 16% of seconds short with 20 bins, 7%
+    with 50; 100 bins choose the same and take 3.5 times longer);
   - without windows that contain a second in which service 2 or 3 is DRAINING
     a backlog: its queue holds at least QUEUE requests and is shrinking. A
     draining service emits more than it receives (in 87% / 77% of those
@@ -66,6 +70,7 @@ W_COMPLETION, W_QUALITY, QUALITY_TARGET = 3.0, 0.5, 800.0
 DELTA = 0.01          # act only if the best candidate beats the current one by more than this
 QUEUE, LOOKBACK = 1000, 10   # draining: queue >= QUEUE and smaller than LOOKBACK seconds earlier
 WINDOW = 30                  # seconds per row of the planner's tables
+PLANNER_BINS = 50            # 10 req/s; the model's 20 bins (25 req/s) hide shortfalls inside a bin
 
 
 def draining(frame, queue=QUEUE, lookback=LOOKBACK):
@@ -94,17 +99,27 @@ def settled_windows(frames, window=WINDOW, queue=QUEUE, lookback=LOOKBACK):
     return df, (df["draining"] > 0).to_numpy()
 
 
-def settled_chain(model, frames, window=WINDOW, queue=QUEUE, lookback=LOOKBACK):
+def settled_chain(model, frames, window=WINDOW, queue=QUEUE, lookback=LOOKBACK, n_bins=None):
     """
     The three chain tables of throughput_3, refitted on settled WINDOW-second
-    means: P(throughput_i | upstream flow, capacity_i), same bins, same
-    noisy-min prior and prior weight as the model's own chain.
-    Returns (tables, info).
+    means: P(throughput_i | upstream flow, capacity_i), same noisy-min prior
+    and prior weight as the model's own chain.
+
+    n_bins: None = the model's bins (20 of 25 req/s); otherwise n_bins of
+    equal width over the training range of throughput_3, shared by the load,
+    the throughputs and the capacities as in the model.
+
+    Returns (chain, info); chain = {tables, edges, bin_value}.
     """
     node = model.nodes["throughput_3"]
     df, drain = settled_windows(frames, window, queue, lookback)
     df = df[~drain]
-    K, edges, ess = node.n_y, node.y_edges, node.cfg["ess"]
+    if n_bins is None:
+        edges = node.y_edges
+    else:
+        y = df["throughput_3"].to_numpy()
+        edges = np.linspace(y.min(), y.max(), n_bins + 1)[1:-1]
+    K, ess = len(edges) + 1, node.cfg["ess"]
     code = lambda x: np.searchsorted(edges, np.asarray(x, dtype=float), side="right")  # noqa: E731
     tables = []
     for i in (1, 2, 3):
@@ -112,18 +127,32 @@ def settled_chain(model, frames, window=WINDOW, queue=QUEUE, lookback=LOOKBACK):
         cap = code(df[f"capacity_{i}"])
         tables.append(A.CPT([up, cap, np.minimum(up, cap)], [K, K, K], code(df[f"throughput_{i}"]),
                             K, "backoff", ess, (2, A.noisy_min_table(K))))
-    return tables, dict(settled_windows=int((~drain).sum()), all_windows=len(drain),
-                        window=window, queue=queue, lookback=lookback)
+    y3, b3 = df["throughput_3"].to_numpy(), code(df["throughput_3"])
+    cnt = np.bincount(b3, minlength=K)
+    centers = np.r_[edges[:1], (edges[1:] + edges[:-1]) / 2, edges[-1:]]
+    bin_value = np.where(cnt > 0, np.bincount(b3, weights=y3, minlength=K) / np.maximum(cnt, 1), centers)
+    chain = dict(tables=tables, edges=edges, bin_value=bin_value)
+    return chain, dict(settled_windows=int((~drain).sum()), all_windows=len(drain), window=window,
+                       queue=queue, lookback=lookback, n_bins=K)
 
 
-def build_settled_chain(model_path, out=None, window=WINDOW, queue=QUEUE, lookback=LOOKBACK):
+def chain_path(model_path, n_bins=None):
+    stem = Path(model_path).stem + "_planner_chain" + (f"_{n_bins}bins" if n_bins else "")
+    return Path(model_path).with_name(stem + ".pkl")
+
+
+def build_settled_chain(model_path, out=None, window=WINDOW, queue=QUEUE, lookback=LOOKBACK, n_bins=None):
     """Fit the settled tables on the model's training files and save them next to the model."""
     model = B.Model.load(str(model_path))
     frames = [model.load_frame(REPO / "data" / f) for f in model.meta["files"]]
-    tables, info = settled_chain(model, frames, window, queue, lookback)
-    out = Path(out or Path(model_path).with_name(Path(model_path).stem + "_planner_chain.pkl"))
-    pd.to_pickle(dict(tables=tables, info=info, model=Path(model_path).name), out)
+    chain, info = settled_chain(model, frames, window, queue, lookback, n_bins)
+    out = Path(out or chain_path(model_path, n_bins))
+    pd.to_pickle(dict(chain=chain, info=info, model=Path(model_path).name), out)
     return out, info
+
+
+def load_chain(path):
+    return pd.read_pickle(path)["chain"]
 
 
 def candidates():
@@ -135,12 +164,14 @@ def candidates():
 
 
 class Planner:
-    def __init__(self, model, tables=None, delta=DELTA):
-        """tables: the settled chain (settled_chain / build_settled_chain); None = the model's own chain."""
-        self.model, self.tables, self.delta = model, tables, delta
+    def __init__(self, model, chain=None, delta=DELTA):
+        """chain: the settled chain (settled_chain / load_chain); None = the model's own chain."""
+        self.model, self.chain, self.delta = model, chain, delta
         self.node = model.nodes["throughput_3"]
         if self.node.chain is None:
             raise ValueError("the model has no reconfiguration chain for throughput_3")
+        self.edges = self.node.y_edges if chain is None else chain["edges"]
+        self.bin_value = self.node.bin_value if chain is None else chain["bin_value"]
         self.cands = B.add_capacity(candidates(), model.capacity)
         self.phi_quality = np.minimum(self.cands[[f"data_quality_{i}" for i in (1, 2, 3)]].to_numpy()
                                       / QUALITY_TARGET, 1.0).sum(axis=1)
@@ -148,15 +179,16 @@ class Planner:
     def throughput_3(self, load, configs):
         """P(bin of throughput_3) for each row of `configs` (with capacity columns) under `load`."""
         n = len(configs)
-        if self.tables is None:
+        if self.chain is None:
             inputs = {f"{D.LOAD_COL}@t": np.full(n, float(load))}
             for i in (1, 2, 3):
                 inputs[f"capacity_{i}@t+h"] = configs[f"capacity_{i}"].to_numpy(dtype=float)
             return self.node._predict_chain(inputs, np.ones(n, dtype=bool))
-        K, edges = self.node.n_y, self.node.y_edges
+        edges = self.edges
+        K = len(edges) + 1
         code = lambda x: np.searchsorted(edges, np.asarray(x, dtype=float), side="right")  # noqa: E731
         P_up = None
-        for i, cpt in zip((1, 2, 3), self.tables):
+        for i, cpt in zip((1, 2, 3), self.chain["tables"]):
             cap = code(configs[f"capacity_{i}"])
             table = lambda up, cpt=cpt, cap=cap: cpt.predict([up, cap, np.minimum(up, cap)], n)  # noqa: E731
             if P_up is None:                               # the load is observed
@@ -166,7 +198,7 @@ class Planner:
         return P_up
 
     def expected_completion(self, load, P):
-        phi = np.minimum(self.node.bin_value / max(float(load), 1e-9), 1.0)
+        phi = np.minimum(self.bin_value / max(float(load), 1e-9), 1.0)
         return P @ phi
 
     def score(self, load, configs=None, phi_quality=None):
@@ -205,7 +237,7 @@ class Planner:
             utility=float(U[best] if act else U_cur[0]), completion=float(comp[best] if act else comp_cur[0]),
             utility_current=float(U_cur[0]), completion_current=float(comp_cur[0]),
             utility_best=float(U[best]), completion_best=float(comp[best]),
-            probs=(P[k] if act else P_cur[0]), bin_value=self.node.bin_value,
+            probs=(P[k] if act else P_cur[0]), bin_value=self.bin_value,
         )
 
 
@@ -216,8 +248,10 @@ if __name__ == "__main__":
     ap.add_argument("--window", type=int, default=WINDOW)
     ap.add_argument("--queue", type=int, default=QUEUE)
     ap.add_argument("--lookback", type=int, default=LOOKBACK)
+    ap.add_argument("--bins", type=int, default=PLANNER_BINS, help="0 = the model's bins")
     args = ap.parse_args()
-    path, info = build_settled_chain(args.model, window=args.window, queue=args.queue, lookback=args.lookback)
-    print(f"wrote {path}: {info['settled_windows']} of {info['all_windows']} {info['window']} s windows kept "
+    path, info = build_settled_chain(args.model, window=args.window, queue=args.queue, lookback=args.lookback,
+                                     n_bins=args.bins or None)
+    print(f"wrote {path}: {info['settled_windows']} of {info['all_windows']} {info['window']} s windows kept, {info['n_bins']} bins "
           f"({info['settled_windows'] / info['all_windows']:.1%}; dropped: a second with queue >= "
           f"{info['queue']} shrinking over {info['lookback']} s)")
