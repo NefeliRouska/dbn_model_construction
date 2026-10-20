@@ -17,6 +17,10 @@ which change the load at most once a minute, they change it every second.
             ~HIGH), as in the bursty trace of Sedlak et al.: no square jumps,
             but a load that can rise by ~300 req/s within ten minutes
 
+  check     not part of the experiment: steps of CHECK_STEP seconds through
+            CHECK_LEVELS (200, 450, 150, 350 req/s), so that a 10 min test run
+            makes every planner scale up, down and up again
+
 load(name, t, seed) is the load at second t of the pattern; the whole hour is
 generated once per (name, seed) and cached.
 """
@@ -28,7 +32,8 @@ SECONDS = 3600
 LOW, HIGH = 100, 500
 LOW_DIURNAL = 230
 BASE_BURSTY, BUMPS = 150, 4
-PATTERNS = ("diurnal", "bursty")
+CHECK_LEVELS, CHECK_STEP = (200, 450, 150, 350), 150
+PATTERNS = ("diurnal", "bursty", "check")
 
 
 def _slow_noise(rng, n, sd, tau=60.0):
@@ -55,6 +60,8 @@ def trace(name, seed=783122):
             x = x + rng.uniform(30, 100) * np.exp(-0.5 * ((t - rng.uniform(0, SECONDS)) / rng.uniform(40, 120)) ** 2)
         centre = rng.uniform(0.2, 0.8) * SECONDS
         x = x + rng.uniform(270, 330) * np.exp(-0.5 * ((t - centre) / rng.uniform(180, 300)) ** 2)
+    elif name == "check":
+        x = np.array(CHECK_LEVELS)[(t // CHECK_STEP) % len(CHECK_LEVELS)]
     else:
         raise ValueError(f"unknown pattern {name}")
     return np.clip(np.round(x), LOW, HIGH).astype(int)
