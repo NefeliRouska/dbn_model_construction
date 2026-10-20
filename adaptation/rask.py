@@ -174,7 +174,10 @@ class RaskPlanner:
                             utility_current=nan, probs=None, rask=f"solver: {res.message}")
             self.last_x = list(res.x)
             cores = np.clip([res.x[1], res.x[3], res.x[5]], 1.0, TOTAL_CORES)
-            cores = np.floor(cores / max(cores.sum() / TOTAL_CORES, 1.0) * 100) / 100     # 2 decimals, sum <= 8
+            cores = np.round(cores / max(cores.sum() / TOTAL_CORES, 1.0), 2)              # 2 decimals, as the services
+            while cores.sum() > TOTAL_CORES + 1e-9:                                        # sum <= 8, each >= 1 (their
+                cores[np.argmax(cores)] -= 0.01                                            # lower bound clips 0.99 to 1)
+            cores = np.round(np.maximum(cores, 1.0), 2)
             new = {f"cores_{i}": float(cores[i - 1]) for i in (1, 2, 3)}
             new |= {f"data_quality_{i}": int(np.clip(round(res.x[2 * (i - 1)]), Q_MIN, Q_MAX)) for i in (1, 2, 3)}
             event = "optimise"

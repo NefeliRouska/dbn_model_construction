@@ -235,6 +235,12 @@ class Planner:
 
         X = self.cands[SETTINGS].to_numpy()
         changed = (X != cur[SETTINGS].to_numpy()).sum(axis=1)
+        if observed is not None:
+            # the current configuration among the candidates gets its observed utility too; otherwise
+            # the best candidate can be the current configuration itself (by its prediction), and the
+            # loop would re-send the settings it already has instead of trying the next best
+            U = U.copy()
+            U[changed == 0] = U_cur[0]
         n_cores = X[:, :3].sum(axis=1)
         best = np.lexsort((n_cores, changed, -np.round(U, 12)))[0]
 

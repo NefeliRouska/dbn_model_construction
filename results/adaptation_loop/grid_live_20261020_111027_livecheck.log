@@ -1,0 +1,21 @@
+2026-10-20 11:10:27 grid: planners ['dbn', 'minrule', 'static', 'vpa', 'tabpfn', 'rask'], patterns check, 10.0 min each, 1 repetitions
+2026-10-20 11:10:27 repetition 0: order ['dbn', 'minrule', 'static', 'vpa', 'tabpfn', 'rask']
+2026-10-20 11:10:42   drained in 15 s (queues 100 / 100)
+2026-10-20 11:10:42 START dbn seed0
+2026-10-20 11:20:43 DONE dbn seed0 -> /home/nero/Downloads/dbn_model_construction/results/adaptation_loop/live_dbn_50bins_10min_seed0_chec_livecheck_20261020_111043.jsonl (10.0 min)
+2026-10-20 11:20:58   drained in 15 s (queues 100 / 100)
+2026-10-20 11:20:58 START minrule seed0
+2026-10-20 11:30:58 DONE minrule seed0 -> /home/nero/Downloads/dbn_model_construction/results/adaptation_loop/live_minrule_10min_seed0_chec_livecheck_20261020_112058.jsonl (10.0 min)
+2026-10-20 11:31:13   drained in 15 s (queues 100 / 100)
+2026-10-20 11:31:13 START static seed0
+2026-10-20 11:41:13 DONE static seed0 -> /home/nero/Downloads/dbn_model_construction/results/adaptation_loop/live_static_10min_seed0_chec_livecheck_20261020_113113.jsonl (10.0 min)
+2026-10-20 11:41:28   drained in 15 s (queues 100 / 100)
+2026-10-20 11:41:28 START vpa seed0
+2026-10-20 11:51:29 DONE vpa seed0 -> /home/nero/Downloads/dbn_model_construction/results/adaptation_loop/live_vpa_10min_seed0_chec_livecheck_20261020_114129.jsonl (10.0 min)
+2026-10-20 11:51:44   drained in 15 s (queues 100 / 100)
+2026-10-20 11:51:44 START tabpfn seed0
+2026-10-20 12:01:44 DONE tabpfn seed0 -> /home/nero/Downloads/dbn_model_construction/results/adaptation_loop/live_tabpfn_10min_seed0_chec_livecheck_20261020_115144.jsonl (10.0 min)
+2026-10-20 12:01:59   drained in 15 s (queues 100 / 100)
+2026-10-20 12:01:59 START rask seed0
+2026-10-20 12:12:00 DONE rask seed0 -> /home/nero/Downloads/dbn_model_construction/results/adaptation_loop/live_rask_deg2_10min_seed0_chec_livecheck_20261020_120200.jsonl (10.0 min)
+2026-10-20 12:12:00 grid finished
