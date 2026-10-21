@@ -7,7 +7,8 @@ For every repetition, every planner runs once through the given load patterns
 per repetition (seeded), so that no planner always runs first or last.
 Between two runs the chain is drained: the load is set to DRAIN_RPS with a
 high-capacity configuration until the queues of services 2 and 3 are below
-DRAIN_QUEUE (at most DRAIN_MAX s), so that every run starts from the same state.
+DRAIN_QUEUE (at most DRAIN_MAX s; a WARNING is logged if they are still
+longer), so that every run starts from the same state.
 
 A run that fails is reported and the grid goes on; a progress line per run is
 written to the grid's own log, so an interruption loses at most the run in
@@ -31,7 +32,7 @@ import loop as L  # noqa: E402
 
 PLANNERS = ("dbn", "minrule", "static", "vpa", "tabpfn", "rask")
 ALL_PATTERNS = "periodic,once_in_a_lifetime,unpredictable,diurnal,bursty"
-DRAIN_RPS, DRAIN_QUEUE, DRAIN_MAX = 100, 1000, 120
+DRAIN_RPS, DRAIN_QUEUE, DRAIN_MAX = 100, 1000, 300     # RASK can leave a backlog of 10,000 and more
 DRAIN_CONFIG = dict(cores_1=3, cores_2=3, cores_3=2, data_quality_1=100, data_quality_2=100, data_quality_3=100)
 
 
@@ -47,7 +48,9 @@ def drain(log):
         _, row = M.query_now()
         if row["buffer_size_2"] < DRAIN_QUEUE and row["buffer_size_3"] < DRAIN_QUEUE and time.time() - t0 >= 15:
             break
-    log(f"  drained in {time.time() - t0:.0f} s (queues {row['buffer_size_2']:.0f} / {row['buffer_size_3']:.0f})")
+    ok = row["buffer_size_2"] < DRAIN_QUEUE and row["buffer_size_3"] < DRAIN_QUEUE
+    log(f"  {'drained' if ok else 'WARNING: not drained'} in {time.time() - t0:.0f} s "
+        f"(queues {row['buffer_size_2']:.0f} / {row['buffer_size_3']:.0f})")
 
 
 def main():

@@ -1,0 +1,9 @@
+2026-10-20 12:20:00 grid: planners ['tabpfn', 'rask'], patterns check, 10.0 min each, 1 repetitions
+2026-10-20 12:20:00 repetition 0: order ['tabpfn', 'rask']
+2026-10-20 12:22:01   drained in 120 s (queues 2142 / 500)
+2026-10-20 12:22:01 START tabpfn seed0
+2026-10-20 12:32:01 DONE tabpfn seed0 -> /home/nero/Downloads/dbn_model_construction/results/adaptation_loop/live_tabpfn_10min_seed0_chec_livecheck2_20261020_122201.jsonl (10.0 min)
+2026-10-20 12:32:16   drained in 15 s (queues 100 / 100)
+2026-10-20 12:32:16 START rask seed0
+2026-10-20 12:42:17 DONE rask seed0 -> /home/nero/Downloads/dbn_model_construction/results/adaptation_loop/live_rask_deg2_10min_seed0_chec_livecheck2_20261020_123217.jsonl (10.0 min)
+2026-10-20 12:42:17 grid finished
