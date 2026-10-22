@@ -1,14 +1,21 @@
 """
-run_grid.py -- run several planners on the testbed (or the simulator) one
-after another, unattended: the short live check and the full experiment.
+run_grid.py -- run the planners on the testbed (or the simulator) one after
+another, unattended: the short live check and the full experiment.
 
-For every repetition, every planner runs once through the given load patterns
-(loop.py, one JSON-lines log per run). The order of the planners is shuffled
-per repetition (seeded), so that no planner always runs first or last.
-Between two runs the chain is drained: the load is set to DRAIN_RPS with a
-high-capacity configuration until the queues of services 2 and 3 are below
-DRAIN_QUEUE (at most DRAIN_MAX s; a WARNING is logged if they are still
-longer), so that every run starts from the same state.
+One run = one planner on ONE load pattern (loop.py, one JSON-lines log per
+run), as in Sedlak et al., where every pattern was a run of its own: nothing a
+planner leaves behind in one pattern (a backlog, RASK's learned curves) carries
+into the next. Every repetition runs every (planner, pattern) pair once, in an
+order shuffled per repetition (seeded), so that no pair always runs first or
+last.
+
+Before every run the chain is drained to empty: the load is switched off and a
+high-capacity configuration applied until the queues of services 2 and 3 are
+below DRAIN_QUEUE, for at least DRAIN_MIN and at most DRAIN_MAX seconds. If
+they are still longer (RASK can leave several 100,000 requests queued), the
+three service containers are restarted, which empties their queues, and the
+drain is repeated. Every drain is logged, so every run's starting state is on
+record.
 
 A run that fails is reported and the grid goes on; a progress line per run is
 written to the grid's own log, so an interruption loses at most the run in
@@ -32,25 +39,59 @@ import loop as L  # noqa: E402
 
 PLANNERS = ("dbn", "minrule", "static", "vpa", "tabpfn", "rask")
 ALL_PATTERNS = "periodic,once_in_a_lifetime,unpredictable,diurnal,bursty"
-DRAIN_RPS, DRAIN_QUEUE, DRAIN_MAX = 100, 1000, 300     # RASK can leave a backlog of 10,000 and more
+DRAIN_QUEUE, DRAIN_MIN, DRAIN_MAX = 100, 15, 1800
 DRAIN_CONFIG = dict(cores_1=3, cores_2=3, cores_3=2, data_quality_1=100, data_quality_2=100, data_quality_3=100)
+SERVICE_CONTAINERS = [f"elastic-workbench-linked-service-{i}" for i in (1, 2, 3)]
+READY_TIMEOUT = 180
+
+
+def _read():
+    import monitor as M
+    try:
+        _, row = M.query_now()
+        return row if len(row) == 15 else None
+    except Exception:
+        return None
+
+
+def _drain_once(log, max_s):
+    chain = L.LiveChain()
+    chain.set_load(0)
+    row = _read()
+    current = {c: L.setting(row[c]) for c in L.PL.SETTINGS} if row else None
+    chain.executor.apply(current, DRAIN_CONFIG)
+    t0 = time.time()
+    while True:
+        time.sleep(5)
+        row = _read()
+        empty = row is not None and row["buffer_size_2"] < DRAIN_QUEUE and row["buffer_size_3"] < DRAIN_QUEUE
+        if (empty and time.time() - t0 >= DRAIN_MIN) or time.time() - t0 >= max_s:
+            return empty, row, time.time() - t0
+
+
+def _restart_services(log):
+    subprocess.run(["docker", "restart"] + SERVICE_CONTAINERS, capture_output=True, text=True)
+    t0 = time.time()
+    while time.time() - t0 < READY_TIMEOUT:
+        time.sleep(5)
+        if _read() is not None:
+            log(f"  services restarted, metrics back after {time.time() - t0:.0f} s")
+            return True
+    log("  WARNING: services restarted but metrics not back")
+    return False
 
 
 def drain(log):
-    import monitor as M
-    chain = L.LiveChain()
-    chain.set_load(DRAIN_RPS)
-    _, row = M.query_now()
-    chain.executor.apply({c: L.setting(row[c]) for c in L.PL.SETTINGS}, DRAIN_CONFIG)
-    t0 = time.time()
-    while time.time() - t0 < DRAIN_MAX:
-        time.sleep(5)
-        _, row = M.query_now()
-        if row["buffer_size_2"] < DRAIN_QUEUE and row["buffer_size_3"] < DRAIN_QUEUE and time.time() - t0 >= 15:
-            break
-    ok = row["buffer_size_2"] < DRAIN_QUEUE and row["buffer_size_3"] < DRAIN_QUEUE
-    log(f"  {'drained' if ok else 'WARNING: not drained'} in {time.time() - t0:.0f} s "
-        f"(queues {row['buffer_size_2']:.0f} / {row['buffer_size_3']:.0f})")
+    empty, row, secs = _drain_once(log, DRAIN_MAX)
+    q = f"queues {row['buffer_size_2']:.0f} / {row['buffer_size_3']:.0f}" if row else "no metrics"
+    if empty:
+        log(f"  drained in {secs:.0f} s ({q})")
+        return
+    log(f"  not drained in {secs:.0f} s ({q}); restarting the service containers")
+    _restart_services(log)
+    empty, row, secs = _drain_once(log, 300)
+    q = f"queues {row['buffer_size_2']:.0f} / {row['buffer_size_3']:.0f}" if row else "no metrics"
+    log(f"  {'drained' if empty else 'WARNING: not drained'} after restart in {secs:.0f} s ({q})")
 
 
 def main():
@@ -60,14 +101,14 @@ def main():
     mode.add_argument("--sim", action="store_true")
     ap.add_argument("--planners", default=",".join(PLANNERS))
     ap.add_argument("--patterns", default=ALL_PATTERNS)
-    ap.add_argument("--minutes", type=float, default=60, help="minutes per load pattern")
+    ap.add_argument("--minutes", type=float, default=60, help="minutes per run (one load pattern)")
     ap.add_argument("--repeats", type=int, default=3)
     ap.add_argument("--no-shuffle", action="store_true")
     ap.add_argument("--tag", default="")
     ap.add_argument("--skip-done", default=None, help="a previous grid log: skip the runs it lists as done")
     args = ap.parse_args()
 
-    planners = args.planners.split(",")
+    planners, patterns = args.planners.split(","), args.patterns.split(",")
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     L.RESULTS.mkdir(parents=True, exist_ok=True)
     grid_log = L.RESULTS / f"grid_{'live' if args.live else 'sim'}_{stamp}{args.tag}.log"
@@ -81,25 +122,26 @@ def main():
         with open(grid_log, "a") as f:
             f.write(line + "\n")
 
-    log(f"grid: planners {planners}, patterns {args.patterns}, {args.minutes} min each, {args.repeats} repetitions")
+    log(f"grid: planners {planners}, patterns {patterns}, {args.minutes} min per run, {args.repeats} repetitions, "
+        f"{len(planners) * len(patterns) * args.repeats} runs")
     for rep in range(args.repeats):
-        order = list(planners)
+        order = [(p, pat) for p in planners for pat in patterns]
         if not args.no_shuffle:
             random.Random(1000 + rep).shuffle(order)
-        log(f"repetition {rep}: order {order}")
-        for p in order:
-            key = f"{p} seed{rep}"
+        log(f"repetition {rep}: order {[f'{p}/{pat}' for p, pat in order]}")
+        for k, (p, pat) in enumerate(order):
+            key = f"{p} {pat} seed{rep}"
             if key in done:
                 log(f"SKIP {key} (done in {args.skip_done})")
                 continue
             if args.live:
                 drain(log)
             cmd = [sys.executable, str(HERE / "loop.py"), "--live" if args.live else "--sim", "--planner", p,
-                   "--patterns", args.patterns, "--minutes", str(args.minutes), "--seed", str(rep)]
+                   "--patterns", pat, "--minutes", str(args.minutes), "--seed", str(rep)]
             if args.tag:
                 cmd += ["--tag", args.tag]
             t0 = time.time()
-            log(f"START {key}")
+            log(f"START {key} ({k + 1}/{len(order)} of repetition {rep})")
             r = subprocess.run(cmd, capture_output=True, text=True)
             out = [line for line in r.stdout.splitlines() if line.startswith("log:")]
             if r.returncode == 0:
