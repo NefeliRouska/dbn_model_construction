@@ -15,3 +15,9 @@ results/tabpfn/*_runs.csv.gz
 # Roll-out per-run tables and files superseded during development
 results/rollout/*_runs.csv.gz
 results/_superseded/
+
+# Part 3: raw per-run logs; the main experiment is committed as
+# results/adaptation_loop/main_experiment_20261022.tar.gz; simulator runs are scratch
+results/adaptation_loop/main/*.jsonl
+results/adaptation_loop/main/*.log
+results/adaptation_loop/sim_*.jsonl
