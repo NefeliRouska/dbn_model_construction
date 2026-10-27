@@ -247,12 +247,60 @@ def fig_fulfillment_stability(runs, path):
     return path
 
 
+def reaction(df, planner):
+    """
+    Time to react to each load step (load changes by >= JUMP of its value in one second): seconds from the
+    step until the loop starts a plan (detect), the planning time (decide), seconds until a new configuration
+    is sent (send) and until the services report it (applied), and until the median completion of the next
+    5 s is >= RECOVERED (recover; steps to a load <= CEILING only, censored at the next step).
+    """
+    load = df["load_set"].to_numpy(dtype=float)
+    comp = df["completion"].to_numpy(dtype=float)
+    ev = df["event"].notna().to_numpy() if "event" in df else np.zeros(len(df), dtype=bool)
+    act = df["act"].fillna(0).astype(bool).to_numpy() if "act" in df else np.zeros(len(df), dtype=bool)
+    steps = np.flatnonzero(np.abs(np.diff(load)) >= JUMP * np.maximum(load[:-1], 1.0)) + 1
+    out = []
+    for k, t0 in enumerate(steps):
+        end = steps[k + 1] if k + 1 < len(steps) else len(df)
+        r = dict(planner=planner, step_from=load[t0 - 1], step_to=load[t0], servable=load[t0] <= CEILING)
+        e = np.flatnonzero(ev[t0:end])
+        r["detect_s"] = float(e[0]) if len(e) else np.nan
+        r["decide_ms"] = float(df["plan_ms"].iloc[t0 + e[0]]) if len(e) else np.nan
+        a_ = np.flatnonzero(act[t0:end])
+        r["send_s"] = float(a_[0]) if len(a_) else np.nan
+        r["applied_s"] = np.nan
+        if len(a_):
+            ts = t0 + a_[0]
+            cfg = df["new_config"].iloc[ts]
+            for t in range(ts, end):
+                if all(abs(float(df[c].iloc[t]) - float(cfg[c])) < 0.011 for c in SETTINGS):
+                    r["applied_s"] = float(t - t0)
+                    break
+        r["recover_s"] = np.nan
+        if r["servable"]:
+            for t in range(t0, end - RECOVER_WINDOW + 1):
+                if np.median(comp[t:t + RECOVER_WINDOW]) >= RECOVERED:
+                    r["recover_s"] = float(t - t0)
+                    break
+            if np.isnan(r["recover_s"]):
+                r["recover_s"] = float(end - t0)
+                r["never"] = True
+        out.append(r)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--logs", default=str(REPO / "results" / "adaptation_loop" / "main"))
     args = ap.parse_args()
     paths = sorted(glob.glob(str(Path(args.logs) / "live_*_main_*.jsonl")))
     runs = per_run(paths)
+    steps = []
+    for path in paths:
+        m = NAME_RE.search(Path(path).name)
+        steps += [dict(r, rep=int(m["rep"]), pattern=pd.read_json(path, lines=True, nrows=1)["pattern"].iloc[0])
+                  for r in reaction(pd.read_json(path, lines=True), m["planner"])]
+    steps = pd.DataFrame(steps)
     OUT_TABLES.mkdir(parents=True, exist_ok=True)
     runs.to_csv(OUT_TABLES / "per_run.csv", index=False)
     print(f"{len(runs)} runs; per planner:", runs.groupby("planner").size().to_dict())
@@ -272,6 +320,17 @@ def main():
     tests.to_csv(OUT_TABLES / "paired_vs_dbn.csv", index=False)
     print("\n== DBN minus each planner, paired on (pattern, repetition), 95% bootstrap interval, Holm p\n"
           + tests.round(4).to_string(index=False))
+    steps.to_csv(OUT_TABLES / "reaction_steps.csv", index=False)
+    rt = steps.groupby("planner").agg(
+        steps=("step_to", "size"), with_change=("send_s", lambda x: x.notna().mean()),
+        detect_s=("detect_s", "median"), decide_ms=("decide_ms", "median"), send_s=("send_s", "median"),
+        applied_s=("applied_s", "median"),
+        recover_s=("recover_s", lambda x: x[steps.loc[x.index, "servable"]].median()),
+        never_recovered=("never", lambda x: int(x.fillna(False).sum())) if "never" in steps else ("step_to", lambda x: 0))
+    rt = rt.reindex([p for p in PLANNERS if p in rt.index])
+    rt.to_csv(OUT_TABLES / "reaction_summary.csv")
+    print("\n== time to react to a load step (medians over the steps; recover: servable steps only)\n"
+          + rt.round(2).to_string())
     print("\nfigure:", fig_fulfillment_stability(runs, OUT_FIGS / "p3_fulfillment_stability.png"))
 
 
