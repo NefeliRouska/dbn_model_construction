@@ -21,3 +21,6 @@ results/_superseded/
 results/adaptation_loop/main/*.jsonl
 results/adaptation_loop/main/*.log
 results/adaptation_loop/sim_*.jsonl
+
+# Paper text stays local only (user, 2026-11-02)
+docs/paper/
